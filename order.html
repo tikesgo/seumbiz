@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>세움비즈 | 접수조회</title>
+    <meta name="description" content="세움비즈 접수조회 페이지" />
+    <link rel="stylesheet" href="/css/common.css" />
+    <link rel="stylesheet" href="/css/order.css" />
+    <link rel="stylesheet" href="/css/order-status.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="site-brand" href="/" aria-label="세움비즈 홈">
+        <img data-site-logo alt="세움비즈 로고" />
+      </a>
+      <button class="mobile-menu-button" type="button" aria-controls="siteNav" aria-expanded="false" aria-label="메뉴 열기">☰</button>
+      <nav class="site-nav" id="siteNav" aria-label="주요 메뉴">
+        <a href="/index.html">상품권교환신청</a>
+        <a href="/vendor.html">업체매입신청</a>
+        <a href="/status.html">실시간매입현황</a>
+        <a href="/support.html">공지사항</a>
+        <a href="/order.html" aria-current="page">내주문조회</a>
+      </nav>
+    </header>
+
+    <main class="order-page">
+      <section class="order-panel" aria-labelledby="orderTitle">
+        <h1 id="orderTitle">진행현황 조회</h1>
+        <p>신청 시 입력한 이름과 휴대폰 번호로 진행현황을 확인하세요.</p>
+      </section>
+
+      <section class="order-status-panel" aria-labelledby="orderStatusFormTitle">
+        <h2 id="orderStatusFormTitle">접수 내역 조회</h2>
+        <form class="order-status-form" data-order-status-form>
+          <label for="orderCustomerName">이름</label>
+          <input id="orderCustomerName" name="customerName" type="text" autocomplete="name" />
+
+          <label for="orderStatusPhone">연락처</label>
+          <input id="orderStatusPhone" name="phone" type="tel" inputmode="numeric" placeholder="010-0000-0000" autocomplete="tel" />
+
+          <button class="order-status-submit-button" type="submit">조회</button>
+        </form>
+        <p class="order-status-message" data-order-status-message hidden></p>
+      </section>
+
+      <section class="order-status-result-panel" aria-live="polite">
+        <div class="order-status-result" data-order-status-result></div>
+      </section>
+    </main>
+
+    <script type="module" src="/js/common.js"></script>
+    <script type="module" src="/js/order.js"></script>
+    <script type="module" src="/js/order-status.js"></script>
+  </body>
+</html>

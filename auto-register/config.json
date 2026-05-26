@@ -1,0 +1,15 @@
+{
+  "pinInputClick": {
+    "x": 2270,
+    "y": 483
+  },
+  "registerButtonClick": {
+    "x": 2253,
+    "y": 564
+  },
+  "countdownSeconds": 3,
+  "delaySeconds": 0.4,
+  "typeIntervalSeconds": 0.01,
+  "moveDurationSeconds": 1,
+  "clearBeforeType": true
+}

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>세움비즈 | 업체 대시보드</title>
+    <meta name="description" content="세움비즈 업체 전용 대시보드 화면" />
+    <link rel="stylesheet" href="/css/common.css" />
+    <link rel="stylesheet" href="/css/biz.css" />
+  </head>
+  <body class="biz-body">
+    <header class="site-header biz-header">
+      <a class="site-brand" href="/biz-dashboard.html" aria-label="세움비즈 업체 대시보드 홈">
+        <img src="/assets/site-logo.png" alt="세움비즈 로고" />
+      </a>
+      <button class="mobile-menu-button" type="button" aria-controls="siteNav" aria-expanded="false" aria-label="메뉴 열기">☰</button>
+      <nav class="site-nav" id="siteNav" aria-label="업체 전용 메뉴">
+        <a href="/biz-dashboard.html" aria-current="page">대시보드</a>
+        <a href="/biz-register.html">상품권등록</a>
+        <a href="/biz-points.html">포인트내역</a>
+        <a href="/biz-withdraw.html">정산신청</a>
+        <a href="/biz-history.html">이용내역</a>
+        <a href="/support.html">고객센터</a>
+      </nav>
+    </header>
+
+    <main class="biz-page">
+      <section class="biz-hero" aria-labelledby="bizDashboardTitle">
+        <p class="biz-eyebrow">Business Portal</p>
+        <h1 id="bizDashboardTitle">세움비즈 업체 대시보드</h1>
+        <p>상품권 등록, 포인트 현황, 정산 진행 상태를 한 화면에서 확인하는 업체 전용 화면입니다.</p>
+      </section>
+
+      <div class="biz-layout">
+        <section class="panel biz-section" aria-label="업체 요약">
+          <div class="biz-card-grid">
+            <article class="biz-stat-card">
+              <span>총 등록금액</span>
+              <strong>12,450,000원</strong>
+              <small>이번 달 등록 기준</small>
+            </article>
+            <article class="biz-stat-card">
+              <span>승인 대기</span>
+              <strong>8건</strong>
+              <small>관리자 검수 전</small>
+            </article>
+            <article class="biz-stat-card">
+              <span>보유 포인트</span>
+              <strong>3,820,000P</strong>
+              <small>정산 신청 가능</small>
+            </article>
+            <article class="biz-stat-card">
+              <span>정산 진행중</span>
+              <strong>1건</strong>
+              <small>확인 처리 중</small>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel biz-section" aria-labelledby="recentRegisterTitle">
+          <div class="biz-section-head">
+            <div>
+              <h2 id="recentRegisterTitle">최근 등록 내역</h2>
+              <p>최근 상품권 등록 현황 목업입니다.</p>
+            </div>
+            <a class="biz-action-button" href="/biz-withdraw.html">정산 신청</a>
+          </div>
+          <div class="biz-table-wrap">
+            <table class="biz-table">
+              <caption>최근 상품권 등록 내역</caption>
+              <thead>
+                <tr>
+                  <th scope="col">등록일</th>
+                  <th scope="col">상품권 종류</th>
+                  <th scope="col">액면가</th>
+                  <th scope="col">수량</th>
+                  <th scope="col">상태</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>2026.05.26</td>
+                  <td>신세계상품권</td>
+                  <td>1,000,000원</td>
+                  <td>3</td>
+                  <td><span class="biz-badge biz-badge--waiting">승인대기</span></td>
+                </tr>
+                <tr>
+                  <td>2026.05.25</td>
+                  <td>롯데모바일상품권</td>
+                  <td>500,000원</td>
+                  <td>4</td>
+                  <td><span class="biz-badge biz-badge--approved">승인완료</span></td>
+                </tr>
+                <tr>
+                  <td>2026.05.24</td>
+                  <td>문화상품권</td>
+                  <td>100,000원</td>
+                  <td>10</td>
+                  <td><span class="biz-badge biz-badge--approved">승인완료</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+
+  </body>
+</html>

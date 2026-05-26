@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>세움비즈 | 포인트 내역</title>
+    <meta name="description" content="세움비즈 업체 전용 포인트 내역 화면" />
+    <link rel="stylesheet" href="/css/common.css" />
+    <link rel="stylesheet" href="/css/biz.css" />
+  </head>
+  <body class="biz-body">
+    <header class="site-header biz-header">
+      <a class="site-brand" href="/biz-dashboard.html" aria-label="세움비즈 업체 대시보드 홈">
+        <img src="/assets/site-logo.png" alt="세움비즈 로고" />
+      </a>
+      <button class="mobile-menu-button" type="button" aria-controls="siteNav" aria-expanded="false" aria-label="메뉴 열기">☰</button>
+      <nav class="site-nav" id="siteNav" aria-label="업체 전용 메뉴">
+        <a href="/biz-dashboard.html">대시보드</a>
+        <a href="/biz-register.html">상품권등록</a>
+        <a href="/biz-points.html" aria-current="page">포인트내역</a>
+        <a href="/biz-withdraw.html">정산신청</a>
+        <a href="/biz-history.html">이용내역</a>
+        <a href="/support.html">고객센터</a>
+      </nav>
+    </header>
+
+    <main class="biz-page">
+      <section class="biz-hero" aria-labelledby="bizPointsTitle">
+        <p class="biz-eyebrow">Point Ledger</p>
+        <h1 id="bizPointsTitle">포인트 내역</h1>
+        <p>상품권 승인과 정산 신청에 따른 포인트 흐름을 확인하는 화면입니다.</p>
+      </section>
+
+      <div class="biz-layout">
+        <section class="biz-balance-card" aria-label="보유 포인트">
+          <span>보유 포인트</span>
+          <strong>3,820,000P</strong>
+          <small>정산 신청 가능 포인트 목업</small>
+        </section>
+
+        <section class="panel biz-section" aria-labelledby="pointLogTitle">
+          <div class="biz-section-head">
+            <div>
+              <h2 id="pointLogTitle">포인트 로그</h2>
+              <p>적립, 차감, 취소 상태를 구분한 목업 테이블입니다.</p>
+            </div>
+          </div>
+          <div class="biz-table-wrap">
+            <table class="biz-table">
+              <caption>포인트 로그 내역</caption>
+              <thead>
+                <tr>
+                  <th scope="col">일자</th>
+                  <th scope="col">구분</th>
+                  <th scope="col">내용</th>
+                  <th scope="col">포인트</th>
+                  <th scope="col">상태</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>2026.05.26</td>
+                  <td>적립</td>
+                  <td>신세계상품권 승인</td>
+                  <td>+1,000,000P</td>
+                  <td><span class="biz-badge biz-badge--earned">적립</span></td>
+                </tr>
+                <tr>
+                  <td>2026.05.25</td>
+                  <td>차감</td>
+                  <td>정산 신청</td>
+                  <td>-500,000P</td>
+                  <td><span class="biz-badge biz-badge--deducted">차감</span></td>
+                </tr>
+                <tr>
+                  <td>2026.05.24</td>
+                  <td>취소</td>
+                  <td>반려 건 포인트 취소</td>
+                  <td>-100,000P</td>
+                  <td><span class="biz-badge biz-badge--canceled">취소</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+
+  </body>
+</html>

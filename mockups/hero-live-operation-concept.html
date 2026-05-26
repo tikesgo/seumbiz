@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>세움기프트 Hero 운영 대시보드 시안</title>
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --panel: #ffffff;
+        --text: #101828;
+        --muted: #667085;
+        --line: #dfe8f4;
+        --primary: #2478ff;
+        --primary-soft: #eaf2ff;
+        --green: #12b76a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 48px 20px;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 20% 18%, rgba(36, 120, 255, 0.12), transparent 32%),
+          linear-gradient(180deg, #f8fbff, var(--bg));
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      .concept-wrap {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(380px, 500px);
+        gap: 36px;
+        align-items: center;
+        width: min(1120px, 100%);
+      }
+
+      .concept-copy {
+        display: grid;
+        gap: 18px;
+      }
+
+      .concept-kicker {
+        width: fit-content;
+        margin: 0;
+        border: 1px solid rgba(36, 120, 255, 0.16);
+        border-radius: 999px;
+        padding: 8px 13px;
+        color: var(--primary);
+        background: rgba(255, 255, 255, 0.78);
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .concept-copy h1 {
+        margin: 0;
+        font-size: clamp(38px, 5vw, 58px);
+        line-height: 1.08;
+        letter-spacing: -0.03em;
+      }
+
+      .concept-copy p {
+        max-width: 520px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 17px;
+        font-weight: 750;
+        line-height: 1.7;
+      }
+
+      .concept-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding-top: 8px;
+      }
+
+      .concept-actions a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 48px;
+        border-radius: 14px;
+        padding: 0 18px;
+        font-size: 14px;
+        font-weight: 950;
+        text-decoration: none;
+      }
+
+      .concept-actions a:first-child {
+        color: #fff;
+        background: var(--primary);
+        box-shadow: 0 16px 34px rgba(36, 120, 255, 0.22);
+      }
+
+      .concept-actions a:last-child {
+        border: 1px solid rgba(36, 120, 255, 0.2);
+        color: var(--primary);
+        background: #fff;
+      }
+
+      .operation-board {
+        position: relative;
+        display: grid;
+        gap: 18px;
+        border: 1px solid rgba(216, 226, 239, 0.95);
+        border-radius: 28px;
+        padding: 24px;
+        background:
+          radial-gradient(circle at 16% 10%, rgba(36, 120, 255, 0.12), transparent 32%),
+          linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(247, 251, 255, 0.96));
+        box-shadow:
+          0 30px 80px rgba(23, 32, 51, 0.14),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        overflow: hidden;
+      }
+
+      .operation-board::before {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+          linear-gradient(rgba(36, 120, 255, 0.045) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(36, 120, 255, 0.045) 1px, transparent 1px);
+        background-size: 28px 28px;
+        mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.8), transparent 72%);
+        content: "";
+      }
+
+      .board-head,
+      .summary-grid,
+      .recent-list,
+      .settlement-strip {
+        position: relative;
+        z-index: 1;
+      }
+
+      .board-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+      }
+
+      .board-title {
+        display: grid;
+        gap: 4px;
+      }
+
+      .board-title span {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .board-title strong {
+        color: var(--text);
+        font-size: 22px;
+        letter-spacing: -0.02em;
+      }
+
+      .live-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        border-radius: 999px;
+        padding: 8px 12px;
+        color: #027a48;
+        background: #dcfae6;
+        font-size: 12px;
+        font-weight: 950;
+      }
+
+      .live-badge::before {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: var(--green);
+        box-shadow: 0 0 0 4px rgba(18, 183, 106, 0.13);
+        content: "";
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .summary-card {
+        display: grid;
+        gap: 6px;
+        border: 1px solid rgba(216, 226, 239, 0.9);
+        border-radius: 18px;
+        padding: 15px;
+        background: rgba(255, 255, 255, 0.76);
+        box-shadow: 0 12px 26px rgba(23, 32, 51, 0.055);
+        backdrop-filter: blur(8px);
+      }
+
+      .summary-card span {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .summary-card strong {
+        color: #061a3a;
+        font-size: 24px;
+        font-weight: 950;
+        letter-spacing: -0.02em;
+      }
+
+      .summary-card small {
+        color: var(--primary);
+        font-size: 11px;
+        font-weight: 950;
+      }
+
+      .settlement-strip {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border: 1px solid rgba(36, 120, 255, 0.12);
+        border-radius: 18px;
+        padding: 13px 15px;
+        background: rgba(234, 242, 255, 0.7);
+      }
+
+      .settlement-strip span {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 850;
+      }
+
+      .settlement-strip strong {
+        color: var(--primary);
+        font-size: 14px;
+        font-weight: 950;
+      }
+
+      .recent-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .recent-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .recent-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+        border: 1px solid rgba(216, 226, 239, 0.82);
+        border-radius: 15px;
+        padding: 11px 12px;
+        background: rgba(255, 255, 255, 0.82);
+      }
+
+      .recent-product {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        min-width: 0;
+      }
+
+      .recent-logo {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        flex: 0 0 28px;
+        border-radius: 9px;
+        color: var(--primary);
+        background: var(--primary-soft);
+        font-size: 12px;
+        font-weight: 950;
+      }
+
+      .recent-product strong {
+        min-width: 0;
+        overflow: hidden;
+        color: var(--text);
+        font-size: 14px;
+        font-weight: 950;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .recent-product small {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .recent-status {
+        border-radius: 999px;
+        padding: 7px 10px;
+        color: #175cd3;
+        background: #e8f1ff;
+        font-size: 12px;
+        font-weight: 950;
+        white-space: nowrap;
+      }
+
+      @media (max-width: 820px) {
+        .concept-wrap {
+          grid-template-columns: 1fr;
+        }
+
+        .summary-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="concept-wrap">
+      <section class="concept-copy">
+        <p class="concept-kicker">24시간 운영 · 실시간 접수</p>
+        <h1>24시간 실시간<br />상품권 매입</h1>
+        <p>
+          접수부터 확인까지 간편하고 빠르게 진행됩니다.
+          처리 현황은 실시간으로 반영되어 투명하게 확인할 수 있습니다.
+        </p>
+        <div class="concept-actions">
+          <a href="#">지금 바로 신청하기</a>
+          <a href="#">실시간 매입현황 보기</a>
+        </div>
+      </section>
+
+      <section class="operation-board" aria-label="실시간 운영 대시보드 시안">
+        <div class="board-head">
+          <div class="board-title">
+            <span>Live Operation</span>
+            <strong>실시간 운영 대시보드</strong>
+          </div>
+          <span class="live-badge">운영중</span>
+        </div>
+
+        <div class="summary-grid">
+          <article class="summary-card">
+            <span>오늘 접수</span>
+            <strong>128건</strong>
+            <small>자동 업데이트</small>
+          </article>
+          <article class="summary-card">
+            <span>평균 처리</span>
+            <strong>3분</strong>
+            <small>접수 확인 기준</small>
+          </article>
+          <article class="summary-card">
+            <span>정산 상태</span>
+            <strong>정상</strong>
+            <small>은행 점검 제외</small>
+          </article>
+        </div>
+
+        <div class="settlement-strip">
+          <span>최근 접수는 처리 순서에 따라 실시간 반영됩니다.</span>
+          <strong>LIVE</strong>
+        </div>
+
+        <div class="recent-list">
+          <div class="recent-head">
+            <span>최근 처리 흐름</span>
+            <span>방금 업데이트</span>
+          </div>
+          <article class="recent-row">
+            <div class="recent-product">
+              <span class="recent-logo">문</span>
+              <div>
+                <strong>문화상품권</strong>
+                <small>50,000원 · 김**</small>
+              </div>
+            </div>
+            <span class="recent-status">접수완료</span>
+          </article>
+          <article class="recent-row">
+            <div class="recent-product">
+              <span class="recent-logo">N</span>
+              <div>
+                <strong>네이버페이</strong>
+                <small>30,000원 · 이**</small>
+              </div>
+            </div>
+            <span class="recent-status">진행중</span>
+          </article>
+          <article class="recent-row">
+            <div class="recent-product">
+              <span class="recent-logo">롯</span>
+              <div>
+                <strong>롯데모바일</strong>
+                <small>100,000원 · 박**</small>
+              </div>
+            </div>
+            <span class="recent-status">완료</span>
+          </article>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

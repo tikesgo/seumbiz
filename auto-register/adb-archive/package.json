@@ -1,0 +1,14 @@
+{
+  "name": "seeumgift-auto-register",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ADB based one-device, one-pin UI automation helper for Lotte mobile gift card registration testing.",
+  "type": "module",
+  "scripts": {
+    "devices": "node register.js --devices",
+    "register": "node register.js --pin"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

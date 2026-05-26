@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>상품권 대량매입 신청 | 세움비즈</title>
+    <meta name="description" content="여러 장의 상품권 핀번호를 한 번에 붙여넣고 대량매입을 신청합니다." />
+    <link rel="stylesheet" href="/css/common.css" />
+    <link rel="stylesheet" href="/css/bulk.css" />
+    <link rel="stylesheet" href="/css/bank-selector.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="site-brand" href="/" aria-label="세움비즈 홈">
+        <img data-site-logo alt="세움비즈 로고" />
+      </a>
+      <button class="mobile-menu-button" type="button" aria-controls="siteNav" aria-expanded="false" aria-label="메뉴 열기">☰</button>
+      <nav class="site-nav" id="siteNav" aria-label="주요 메뉴">
+        <a href="/index.html">상품권교환신청</a>
+        <a href="/vendor.html">업체매입신청</a>
+        <a href="/status.html">실시간매입현황</a>
+        <a href="/support.html">공지사항</a>
+        <a href="/order.html">내주문조회</a>
+      </nav>
+    </header>
+
+    <main class="bulk-page">
+      <section class="bulk-mobile-notice panel">
+        <strong>대량매입 신청은 PC에서 이용해주세요.</strong>
+        <p>핀번호 검수와 대량 등록은 PC 화면에 최적화되어 있습니다.</p>
+        <a href="/index.html">일반 매입 신청으로 이동</a>
+      </section>
+
+      <section class="bulk-desktop">
+        <div class="bulk-hero">
+          <p>PC 전용 대량 등록</p>
+          <h1>상품권 대량매입 신청</h1>
+          <span>여러 장의 상품권 핀번호를 한 번에 붙여넣고 등록할 수 있습니다.</span>
+        </div>
+
+        <form class="bulk-layout" data-bulk-form>
+          <section class="panel bulk-panel bulk-product-panel">
+            <div class="bulk-section-head">
+              <span>1</span>
+              <div>
+                <h2>상품권 종류 선택</h2>
+                <p>대량으로 접수할 상품권 종류를 1개 선택해주세요.</p>
+              </div>
+            </div>
+            <div class="bulk-product-list" data-bulk-product-list></div>
+          </section>
+
+          <section class="panel bulk-panel bulk-paste-panel">
+            <div class="bulk-section-head">
+              <span>2</span>
+              <div>
+                <h2>핀번호 붙여넣기</h2>
+                <p>구매내역을 그대로 복사해서 붙여넣으면 16자리 상품권 번호만 자동 추출됩니다.</p>
+              </div>
+            </div>
+            <textarea id="bulkPinText" data-bulk-pin-text placeholder="예: 2342-2363-0871-5457&#10;2342236308715457&#10;2342 2363 0871 5457"></textarea>
+            <div class="bulk-paste-actions">
+              <button class="bulk-secondary-button" type="button" data-clear-pins>전체 내용 삭제</button>
+              <button class="bulk-primary-button" type="button" data-extract-pins>핀번호 추출</button>
+            </div>
+          </section>
+
+          <section class="panel bulk-panel bulk-preview-panel">
+            <div class="bulk-section-head">
+              <span>3</span>
+              <div>
+                <h2>추출 결과 미리보기</h2>
+                <p>정상 핀번호와 중복 핀번호를 접수 전 확인해주세요.</p>
+              </div>
+            </div>
+            <div class="bulk-summary" data-bulk-summary>
+              <span>총 추출 0개</span>
+              <span>정상 0개</span>
+              <span>중복 0개</span>
+            </div>
+            <div class="bulk-preview-table-wrap">
+              <table class="bulk-preview-table">
+                <thead>
+                  <tr>
+                    <th scope="col">번호</th>
+                    <th scope="col">핀번호</th>
+                    <th scope="col">금액</th>
+                    <th scope="col">상태</th>
+                  </tr>
+                </thead>
+                <tbody data-bulk-preview-body>
+                  <tr>
+                    <td colspan="4">핀번호를 추출하면 결과가 표시됩니다.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel bulk-panel bulk-customer-panel">
+            <div class="bulk-section-head">
+              <span>4</span>
+              <div>
+                <h2>고객 및 입금 계좌 정보</h2>
+                <p>입금받을 계좌와 연락처를 입력해주세요.</p>
+              </div>
+            </div>
+            <div class="bulk-customer-grid">
+              <label for="customerName">이름</label>
+              <input id="customerName" name="customerName" type="text" autocomplete="name" />
+
+              <label for="customerPhone">연락처</label>
+              <input id="customerPhone" name="customerPhone" type="tel" inputmode="numeric" placeholder="010-0000-0000" autocomplete="tel" />
+
+              <label for="bankName">은행</label>
+              <div class="bank-selector" data-bank-selector></div>
+              <input id="bankName" name="bankName" type="hidden" autocomplete="off" />
+
+              <label for="accountNumber">계좌번호</label>
+              <input id="accountNumber" name="accountNumber" type="text" inputmode="numeric" autocomplete="off" />
+
+              <label for="accountHolder">예금주</label>
+              <input id="accountHolder" name="accountHolder" type="text" autocomplete="off" />
+
+              <label for="bulkMemo">메모</label>
+              <textarea id="bulkMemo" name="bulkMemo" rows="4" placeholder="요청사항이 있으면 입력해주세요."></textarea>
+            </div>
+            <div class="bulk-submit-message" data-bulk-submit-message hidden></div>
+            <button class="bulk-submit-button" type="submit">대량매입 접수하기</button>
+          </section>
+        </form>
+      </section>
+    </main>
+
+    <script type="module" src="/js/common.js"></script>
+    <script type="module" src="/js/bulk.js"></script>
+    <script type="module" src="/js/bank-selector.js"></script>
+  </body>
+</html>

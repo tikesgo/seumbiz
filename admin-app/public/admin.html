@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>세움기프트 관리자</title>
+    <link rel="stylesheet" href="/admin/styles.css" />
+    <script src="/admin/config.js"></script>
+    <script type="module" src="/admin/admin.js"></script>
+  </head>
+  <body>
+    <main class="admin-shell">
+      <section class="login-panel" id="loginPanel">
+        <div>
+          <p class="eyebrow">SeeumGift V2</p>
+          <h1>관리자 로그인</h1>
+        </div>
+
+        <form class="login-form" id="loginForm">
+          <label for="adminPassword">비밀번호</label>
+          <div class="login-row">
+            <input id="adminPassword" name="password" type="password" autocomplete="current-password" required />
+            <button class="refresh-button" type="submit">접속</button>
+          </div>
+          <p class="login-message" id="loginMessage" role="status"></p>
+        </form>
+      </section>
+
+      <section class="admin-content" id="adminContent" hidden>
+        <header class="admin-header">
+          <div>
+            <button class="admin-logo-button" id="adminLogoButton" type="button">SeeumGift V2</button>
+            <h1>접수 관리</h1>
+          </div>
+          <div class="header-actions">
+            <p class="header-time" id="headerTime">불러오는 중</p>
+            <div class="header-button-row">
+              <button class="alert-toggle-button" id="alertToggleButton" type="button">알림 꺼짐</button>
+              <button class="alert-toggle-button" id="vendorAlertToggleButton" type="button">업체알림 ON</button>
+              <button class="refresh-button" id="refreshButton" type="button">새로고침</button>
+              <button class="logout-button" id="logoutButton" type="button">로그아웃</button>
+            </div>
+          </div>
+        </header>
+        <div class="admin-toast" id="vendorToast" role="status" hidden>새 업체매입 문의가 접수되었습니다.</div>
+
+        <div class="admin-layout">
+          <aside class="admin-sidebar">
+            <nav class="admin-tabs" aria-label="관리 메뉴">
+              <button class="admin-tab is-active" id="ordersTab" type="button">주문 관리</button>
+              <button class="admin-tab" id="vendorsTab" type="button">
+                <span>업체매입관리</span>
+                <span class="menu-badge" id="vendorReadyBadge" hidden>0</span>
+              </button>
+              <button class="admin-tab" id="giftCardsTab" type="button">상품권 관리</button>
+              <button class="admin-tab" id="banksTab" type="button">은행 관리</button>
+              <button class="admin-tab" id="bannersTab" type="button">메인 배너 관리</button>
+              <button class="admin-tab" id="giftSalesTab" type="button">상품권 매출관리</button>
+              <button class="admin-tab" id="noticesTab" type="button">공지사항 관리</button>
+              <button class="admin-tab" id="settingsTab" type="button">사이트 기본설정</button>
+            </nav>
+          </aside>
+
+          <div class="admin-main">
+            <section class="admin-view" id="ordersView">
+              <section class="summary-strip" aria-label="접수 요약">
+                <div>
+                  <span class="summary-label">전체</span>
+                  <strong id="totalCount">0</strong>
+                </div>
+                <div>
+                  <span class="summary-label">접수완료</span>
+                  <strong id="readyCount">0</strong>
+                </div>
+                <div>
+                  <span class="summary-label">대기</span>
+                  <strong id="workingCount">0</strong>
+                </div>
+                <div>
+                  <span class="summary-label">승인</span>
+                  <strong id="doneCount">0</strong>
+                </div>
+              </section>
+
+              <section class="sound-panel" id="soundPanel" hidden>
+                <strong>신규 접수 알림</strong>
+                <span>접수완료 주문이 남아 있습니다.</span>
+              </section>
+
+              <section class="table-panel">
+                <div class="table-toolbar">
+                  <h2>접수 목록</h2>
+                  <p id="lastLoaded">불러오는 중</p>
+                </div>
+
+                <form class="search-bar" id="searchForm" aria-label="주문 검색">
+                  <label>
+                    이름 검색
+                    <input id="nameSearch" type="search" placeholder="이름 입력" autocomplete="off" />
+                  </label>
+                  <label>
+                    휴대폰번호 검색
+                    <input id="phoneSearch" type="search" placeholder="휴대폰번호 입력" autocomplete="off" />
+                  </label>
+                  <div class="search-actions">
+                    <button class="search-button" type="submit">검색</button>
+                    <button class="reset-button" id="resetSearchButton" type="button">초기화</button>
+                  </div>
+                  <div class="period-filter">
+                    <label>
+                      기간 선택
+                      <select id="periodFilter">
+                        <option value="">전체</option>
+                        <option value="today">오늘</option>
+                        <option value="yesterday">어제</option>
+                        <option value="last7">최근 7일</option>
+                        <option value="thisMonth">이번달</option>
+                        <option value="custom">직접 날짜 선택</option>
+                      </select>
+                    </label>
+                    <div class="date-range-fields" id="dateRangeFields" hidden>
+                      <label>
+                        시작일
+                        <input id="startDateFilter" type="date" />
+                      </label>
+                      <label>
+                        종료일
+                        <input id="endDateFilter" type="date" />
+                      </label>
+                    </div>
+                  </div>
+                </form>
+
+                <div class="state-message" id="stateMessage" role="status"></div>
+
+                <div class="table-wrap">
+                  <table class="orders-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">순번</th>
+                        <th scope="col">접수시간</th>
+                        <th scope="col">이름</th>
+                        <th scope="col">휴대폰번호</th>
+                        <th scope="col">은행명</th>
+                        <th scope="col">구분</th>
+                        <th scope="col">핀번호/수량</th>
+                        <th scope="col">신청금액</th>
+                        <th scope="col">상태</th>
+                        <th scope="col">삭제</th>
+                      </tr>
+                    </thead>
+                    <tbody id="ordersBody"></tbody>
+                  </table>
+                </div>
+              </section>
+            </section>
+
+            <section class="admin-view" id="vendorsView" hidden>
+              <section class="table-panel">
+                <div class="table-toolbar">
+                  <h2>업체매입관리</h2>
+                  <p id="vendorInquiriesLoaded">불러오는 중</p>
+                </div>
+
+                <div class="state-message" id="vendorInquiriesMessage" role="status" hidden></div>
+
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th scope="col">접수일</th>
+                        <th scope="col">업체명</th>
+                        <th scope="col">담당자</th>
+                        <th scope="col">연락처</th>
+                        <th scope="col">상품권 종류</th>
+                        <th scope="col">월 규모</th>
+                        <th scope="col">상태</th>
+                        <th scope="col">관리</th>
+                      </tr>
+                    </thead>
+                    <tbody id="vendorInquiriesBody"></tbody>
+                  </table>
+                </div>
+
+                <section class="vendor-detail-panel" id="vendorInquiryDetailPanel" hidden>
+                  <div class="table-toolbar">
+                    <h2>업체매입 상세정보</h2>
+                    <p>목록에서 문의를 선택하면 상세 내용이 표시됩니다.</p>
+                  </div>
+
+                  <div class="vendor-detail-grid" id="vendorInquiryDetailInfo"></div>
+
+                  <form class="vendor-admin-form" id="vendorInquiryForm">
+                    <label>
+                      상태
+                      <select id="vendorInquiryStatus">
+                        <option value="대기">대기</option>
+                        <option value="접수완료">접수완료</option>
+                        <option value="상담중">상담중</option>
+                        <option value="진행중">진행중</option>
+                        <option value="보류">보류</option>
+                        <option value="완료">완료</option>
+                      </select>
+                    </label>
+                    <label class="vendor-admin-memo-field">
+                      관리자 메모
+                      <textarea id="vendorInquiryMemo" placeholder="상담 내용이나 처리 메모를 입력하세요."></textarea>
+                    </label>
+                    <div class="vendor-admin-actions">
+                      <button class="search-button" id="vendorInquirySaveButton" type="submit">저장</button>
+                    </div>
+                  </form>
+                </section>
+              </section>
+            </section>
+
+            <section class="admin-view" id="giftCardsView" hidden>
+              <section class="gift-card-panel">
+                <div class="table-toolbar">
+                  <h2>상품권 관리</h2>
+                  <p id="giftCardsLoaded">불러오는 중</p>
+                </div>
+
+                <form class="gift-card-form" id="giftCardForm" aria-label="상품권 추가">
+                  <label>
+                    상품명
+                    <input id="giftCardName" name="name" type="text" placeholder="예: 문화상품권" required />
+                  </label>
+                  <label>
+                    상품 코드
+                    <input id="giftCardSlug" name="slug" type="text" placeholder="예: cultureland" required />
+                  </label>
+                  <label>
+                    매입률
+                    <input id="giftCardRate" name="rate" type="number" min="0" step="0.1" placeholder="91" required />
+                  </label>
+                  <label>
+                    정렬
+                    <input id="giftCardSortOrder" name="sort_order" type="number" step="1" placeholder="1" required />
+                  </label>
+                  <label>
+                    로고 PNG
+                    <input id="giftCardImageFile" name="image" type="file" accept="image/png" />
+                  </label>
+                  <button class="search-button" type="submit">상품 추가</button>
+                </form>
+
+                <div class="state-message" id="giftCardMessage" role="status" hidden></div>
+
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th scope="col">정렬</th>
+                        <th scope="col">상품명</th>
+                        <th scope="col">코드</th>
+                        <th scope="col">매입률</th>
+                        <th scope="col">로고 PNG</th>
+                        <th scope="col">노출</th>
+                        <th scope="col">저장</th>
+                      </tr>
+                    </thead>
+                    <tbody id="giftCardsBody"></tbody>
+                  </table>
+                </div>
+              </section>
+            </section>
+
+            <section class="admin-view" id="banksView" hidden>
+              <section class="bank-panel">
+                <div class="table-toolbar">
+                  <h2>은행 관리</h2>
+                  <p id="banksLoaded">불러오는 중</p>
+                </div>
+
+                <form class="bank-form" id="bankForm" aria-label="은행 추가">
+                  <label>
+                    은행명
+                    <input id="bankAdminName" name="name" type="text" placeholder="예: 국민은행" required />
+                  </label>
+                  <label>
+                    정렬
+                    <input id="bankAdminSortOrder" name="sort_order" type="number" step="1" value="0" required />
+                  </label>
+                  <label>
+                    로고 PNG
+                    <input id="bankLogoFile" name="image" type="file" accept="image/png" />
+                  </label>
+                  <button class="search-button" type="submit">은행 추가</button>
+                </form>
+
+                <div class="state-message" id="bankMessage" role="status" hidden></div>
+
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th scope="col">로고</th>
+                        <th scope="col">은행명</th>
+                        <th scope="col">정렬순서</th>
+                        <th scope="col">활성화</th>
+                        <th scope="col">저장</th>
+                      </tr>
+                    </thead>
+                    <tbody id="banksBody"></tbody>
+                  </table>
+                </div>
+              </section>
+            </section>
+
+            <section class="admin-view" id="bannersView" hidden>
+              <section class="banner-panel">
+                <div class="table-toolbar">
+                  <h2>메인 배너 관리</h2>
+                  <div class="toolbar-actions">
+                    <p id="bannersLoaded">불러오는 중</p>
+                    <p class="banner-size-guide">권장 이미지 사이즈: 1200 x 800px / 비율 3:2 / PNG 권장</p>
+                  </div>
+                </div>
+
+                <form class="banner-form" id="bannerForm" aria-label="메인 배너 추가">
+                  <label>
+                    제목
+                    <input id="bannerTitle" name="title" type="text" placeholder="예: 5월 상품권 매입률 안내" required />
+                  </label>
+                  <label>
+                    링크 URL
+                    <input id="bannerLinkUrl" name="link_url" type="url" placeholder="선택사항" />
+                  </label>
+                  <label>
+                    정렬
+                    <input id="bannerSortOrder" name="sort_order" type="number" step="1" value="0" required />
+                  </label>
+                  <label>
+                    배너 PNG
+                    <input id="bannerImageFile" name="image" type="file" accept="image/png" required />
+                    <span class="field-help">Hero 영역 최적 사이즈: 1200 x 800px / 비율 3:2 / PNG 권장</span>
+                  </label>
+                  <label class="banner-active-field">
+                    <input id="bannerActive" name="is_active" type="checkbox" checked />
+                    노출
+                  </label>
+                  <button class="search-button" type="submit">배너 추가</button>
+                </form>
+
+                <div class="state-message" id="bannerMessage" role="status" hidden></div>
+
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th scope="col">이미지</th>
+                        <th scope="col">제목</th>
+                        <th scope="col">링크 URL</th>
+                        <th scope="col">정렬순서</th>
+                        <th scope="col">노출</th>
+                        <th scope="col">저장</th>
+                        <th scope="col">삭제</th>
+                      </tr>
+                    </thead>
+                    <tbody id="bannersBody"></tbody>
+                  </table>
+                </div>
+              </section>
+            </section>
+
+            <section class="admin-view" id="giftSalesView" hidden>
+              <section class="sales-panel">
+                <div class="table-toolbar">
+                  <h2>상품권 매출관리</h2>
+                  <p id="giftSalesLoaded">주문 데이터 기준</p>
+                </div>
+
+                <form class="sales-filter-bar" id="giftSalesFilterForm" aria-label="상품권 매출 기간 필터">
+                  <label>
+                    시작일
+                    <input id="giftSalesStartDate" type="date" />
+                  </label>
+                  <label>
+                    종료일
+                    <input id="giftSalesEndDate" type="date" />
+                  </label>
+                  <div class="sales-filter-actions">
+                    <button class="search-button" type="submit">조회</button>
+                    <button class="reset-button" id="giftSalesTodayButton" type="button">오늘</button>
+                    <button class="reset-button" id="giftSalesYesterdayButton" type="button">어제</button>
+                    <button class="reset-button" id="giftSalesThisMonthButton" type="button">이번달</button>
+                  </div>
+                </form>
+
+                <section class="summary-strip sales-summary-strip" aria-label="상품권 매출 요약">
+                  <div>
+                    <span class="summary-label">총 접수금액</span>
+                    <strong id="salesTotalAmount">0</strong>
+                  </div>
+                  <div>
+                    <span class="summary-label">총 지급예정금액</span>
+                    <strong id="salesTotalPayout">0</strong>
+                  </div>
+                  <div>
+                    <span class="summary-label">총 접수건수</span>
+                    <strong id="salesTotalCount">0</strong>
+                  </div>
+                </section>
+
+                <div class="sales-grid">
+                  <section class="sales-section">
+                    <div class="table-toolbar">
+                      <h2>상품권별 집계</h2>
+                    </div>
+                    <div class="table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th scope="col">상품권명</th>
+                            <th scope="col">접수건수</th>
+                            <th scope="col">접수금액 합계</th>
+                            <th scope="col">적용 매입률</th>
+                            <th scope="col">지급예정금액 합계</th>
+                          </tr>
+                        </thead>
+                        <tbody id="giftSalesProductBody"></tbody>
+                      </table>
+                    </div>
+                  </section>
+
+                  <section class="sales-section">
+                    <div class="table-toolbar">
+                      <h2>권종별 집계</h2>
+                    </div>
+                    <div class="table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th scope="col">상품권명</th>
+                            <th scope="col">권종/금액</th>
+                            <th scope="col">건수</th>
+                            <th scope="col">금액 합계</th>
+                            <th scope="col">지급예정금액 합계</th>
+                          </tr>
+                        </thead>
+                        <tbody id="giftSalesAmountBody"></tbody>
+                      </table>
+                    </div>
+                  </section>
+
+                  <section class="sales-section">
+                    <div class="table-toolbar">
+                      <h2>상태별 집계</h2>
+                    </div>
+                    <div class="table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th scope="col">상태</th>
+                            <th scope="col">접수건수</th>
+                            <th scope="col">접수금액 합계</th>
+                            <th scope="col">지급예정금액 합계</th>
+                          </tr>
+                        </thead>
+                        <tbody id="giftSalesStatusBody"></tbody>
+                      </table>
+                    </div>
+                  </section>
+                </div>
+              </section>
+            </section>
+
+            <section class="admin-view" id="noticesView" hidden>
+              <section class="notice-panel">
+                <div class="table-toolbar">
+                  <h2>공지사항 관리</h2>
+                  <div class="toolbar-actions">
+                    <p id="noticesLoaded">불러오는 중</p>
+                    <button class="search-button" id="openNoticeFormButton" type="button">공지 등록</button>
+                  </div>
+                </div>
+
+                <form class="notice-form" id="noticeForm" aria-label="공지 작성" hidden>
+                  <input id="noticeId" type="hidden" />
+                  <label>
+                    제목
+                    <input id="noticeTitle" name="title" type="text" placeholder="공지 제목" required />
+                  </label>
+                  <label class="notice-content-field">
+                    내용
+                    <textarea id="noticeContent" name="content" placeholder="공지 내용" required></textarea>
+                  </label>
+                  <label>
+                    작성일
+                    <input id="noticeCreatedAt" name="created_at" type="datetime-local" />
+                  </label>
+                  <label>
+                    예약 게시일
+                    <input id="noticeScheduledAt" name="scheduled_at" type="datetime-local" />
+                  </label>
+                  <label class="notice-file-field">
+                    첨부파일
+                    <input id="noticeAttachment" name="attachment" type="file" />
+                    <span id="noticeAttachmentName">선택된 파일 없음</span>
+                  </label>
+                  <div class="notice-options">
+                    <label>
+                      <input id="noticeImportant" name="is_important" type="checkbox" />
+                      중요공지
+                    </label>
+                    <label>
+                      <input id="noticeVisible" name="is_visible" type="checkbox" checked />
+                      노출
+                    </label>
+                  </div>
+                  <div class="notice-actions">
+                    <button class="search-button" id="noticeSubmitButton" type="submit">공지 저장</button>
+                    <button class="reset-button" id="noticeCancelButton" type="button">취소</button>
+                  </div>
+                </form>
+
+                <div class="state-message" id="noticeMessage" role="status" hidden></div>
+
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th scope="col">제목</th>
+                      <th scope="col">작성일</th>
+                      <th scope="col">예약 게시일</th>
+                      <th scope="col">중요공지</th>
+                      <th scope="col">노출 여부</th>
+                      <th scope="col">첨부</th>
+                      <th scope="col">수정</th>
+                      <th scope="col">삭제</th>
+                      </tr>
+                    </thead>
+                    <tbody id="noticesBody"></tbody>
+                  </table>
+                </div>
+              </section>
+            </section>
+
+            <section class="admin-view" id="settingsView" hidden>
+              <section class="settings-panel">
+                <div class="table-toolbar">
+                  <h2>사이트 기본설정</h2>
+                  <p id="siteSettingsLoaded">불러오는 중</p>
+                </div>
+                <form class="settings-form" id="siteSettingsForm">
+                  <label>
+                    상담 전화번호
+                    <input id="consultPhoneInput" name="consult_phone" type="tel" placeholder="010-8310-5150" />
+                    <span>고객 페이지 하단 전화 상담 버튼에 표시됩니다.</span>
+                  </label>
+                  <label>
+                    카카오 오픈채팅 URL
+                    <input id="kakaoOpenchatUrlInput" name="kakao_openchat_url" type="url" placeholder="https://open.kakao.com/..." />
+                    <span>비워두면 고객 페이지에서 카카오톡 상담 버튼이 준비중으로 표시됩니다.</span>
+                  </label>
+                  <label>
+                    상호명
+                    <input id="businessNameInput" name="business_name" type="text" placeholder="세움기프트" />
+                  </label>
+                  <label>
+                    대표자
+                    <input id="businessCeoInput" name="business_ceo" type="text" placeholder="입력필요" />
+                  </label>
+                  <label>
+                    사업자등록번호
+                    <input id="businessRegistrationNumberInput" name="business_registration_number" type="text" placeholder="입력필요" />
+                  </label>
+                  <label>
+                    통신판매업신고번호
+                    <input id="mailOrderNumberInput" name="mail_order_number" type="text" placeholder="입력필요" />
+                  </label>
+                  <label>
+                    주소
+                    <input id="businessAddressInput" name="business_address" type="text" placeholder="입력필요" />
+                  </label>
+                  <label>
+                    고객센터 전화번호
+                    <input id="businessPhoneInput" name="business_phone" type="tel" placeholder="010-8310-5150" />
+                    <span>푸터 고객센터 번호입니다. 비워두면 상담 전화번호를 사용합니다.</span>
+                  </label>
+                  <label>
+                    이메일
+                    <input id="businessEmailInput" name="business_email" type="email" placeholder="acro7888@gmail.com" />
+                  </label>
+                  <label>
+                    운영시간
+                    <input id="businessHoursInput" name="business_hours" type="text" placeholder="24시간 연중무휴" />
+                  </label>
+                  <label>
+                    카피라이트
+                    <input id="footerCopyrightInput" name="footer_copyright" type="text" placeholder="© 세움기프트. All rights reserved." />
+                  </label>
+                  <div class="settings-actions">
+                    <button class="search-button" id="siteSettingsSubmitButton" type="submit">설정 저장</button>
+                  </div>
+                </form>
+                <div class="state-message" id="siteSettingsMessage" hidden></div>
+              </section>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+    <div class="bulk-detail-modal" id="bulkDetailModal" hidden>
+      <div class="bulk-detail-backdrop" id="bulkDetailBackdrop"></div>
+      <section class="bulk-detail-card" role="dialog" aria-modal="true" aria-labelledby="bulkDetailTitle">
+        <header class="bulk-detail-header">
+          <div>
+            <h2 id="bulkDetailTitle">접수 상세보기</h2>
+            <p id="bulkDetailSummary">핀번호 목록을 확인합니다.</p>
+          </div>
+          <button class="bulk-detail-close" id="bulkDetailClose" type="button" aria-label="닫기">×</button>
+        </header>
+        <div class="bulk-detail-actions">
+          <button class="search-button" id="bulkCopyButton" type="button">핀번호 복사하기</button>
+        </div>
+        <div class="bulk-detail-table-wrap">
+          <table>
+            <thead>
+              <tr id="bulkDetailHeadRow">
+                <th scope="col">번호</th>
+                <th scope="col">핀번호</th>
+                <th scope="col">상태</th>
+              </tr>
+            </thead>
+            <tbody id="bulkDetailBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>

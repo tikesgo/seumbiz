@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>세움비즈 | 실시간 매입현황</title>
+    <meta name="description" content="세움비즈 실시간 상품권 매입현황" />
+    <link rel="stylesheet" href="/css/common.css" />
+    <link rel="stylesheet" href="/css/live-status.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="site-brand" href="/" aria-label="세움비즈 홈">
+        <img data-site-logo alt="세움비즈 로고" />
+      </a>
+      <button class="mobile-menu-button" type="button" aria-controls="siteNav" aria-expanded="false" aria-label="메뉴 열기">☰</button>
+      <nav class="site-nav" id="siteNav" aria-label="주요 메뉴">
+        <a href="/index.html">상품권교환신청</a>
+        <a href="/vendor.html">업체매입신청</a>
+        <a href="/status.html" aria-current="page">실시간매입현황</a>
+        <a href="/support.html">공지사항</a>
+        <a href="/order.html">내주문조회</a>
+      </nav>
+    </header>
+
+    <main class="live-status-page">
+      <section class="live-status-hero" aria-labelledby="liveStatusTitle">
+        <h1 id="liveStatusTitle">실시간 매입현황</h1>
+        <p>최근 접수된 상품권 처리 현황을 개인정보 없이 표시합니다.</p>
+      </section>
+
+      <section class="live-status-panel" aria-live="polite">
+        <div class="live-status-header" aria-hidden="true">
+          <span>상품권 종류</span>
+          <span>매입금액</span>
+          <span>고객명</span>
+          <span>처리상태</span>
+        </div>
+        <div class="live-status-list" data-live-status-list></div>
+      </section>
+    </main>
+
+    <script type="module" src="/js/common.js"></script>
+    <script type="module" src="/js/live-status.js"></script>
+  </body>
+</html>

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>세움비즈 | 정산 신청</title>
+    <meta name="description" content="세움비즈 업체 전용 정산 신청 화면" />
+    <link rel="stylesheet" href="/css/common.css" />
+    <link rel="stylesheet" href="/css/biz.css" />
+  </head>
+  <body class="biz-body">
+    <header class="site-header biz-header">
+      <a class="site-brand" href="/biz-dashboard.html" aria-label="세움비즈 업체 대시보드 홈">
+        <img src="/assets/site-logo.png" alt="세움비즈 로고" />
+      </a>
+      <button class="mobile-menu-button" type="button" aria-controls="siteNav" aria-expanded="false" aria-label="메뉴 열기">☰</button>
+      <nav class="site-nav" id="siteNav" aria-label="업체 전용 메뉴">
+        <a href="/biz-dashboard.html">대시보드</a>
+        <a href="/biz-register.html">상품권등록</a>
+        <a href="/biz-points.html">포인트내역</a>
+        <a href="/biz-withdraw.html" aria-current="page">정산신청</a>
+        <a href="/biz-history.html">이용내역</a>
+        <a href="/support.html">고객센터</a>
+      </nav>
+    </header>
+
+    <main class="biz-page">
+      <section class="biz-hero" aria-labelledby="bizWithdrawTitle">
+        <p class="biz-eyebrow">Settlement Request</p>
+        <h1 id="bizWithdrawTitle">정산 신청</h1>
+        <p>보유 포인트를 기준으로 정산 신청 정보를 입력하는 화면입니다.</p>
+      </section>
+
+      <section class="panel biz-section" aria-labelledby="withdrawFormTitle">
+        <div class="biz-section-head">
+          <div>
+            <h2 id="withdrawFormTitle">정산 정보</h2>
+            <p>정산 신청 후 관리자 확인을 거쳐 처리됩니다.</p>
+          </div>
+        </div>
+        <form class="biz-form" id="bizWithdrawRequestForm">
+          <div class="biz-form-grid">
+            <label for="availablePoints">
+              정산 가능 포인트
+              <input id="availablePoints" name="availablePoints" type="text" value="3,820,000P" readonly />
+            </label>
+            <label for="withdrawAmount">
+              신청 금액
+              <input id="withdrawAmount" name="withdrawAmount" type="number" inputmode="numeric" placeholder="예: 1000000" />
+            </label>
+            <label for="withdrawBankName">
+              은행명
+              <input id="withdrawBankName" name="withdrawBankName" type="text" placeholder="예: 국민은행" autocomplete="off" />
+            </label>
+            <label for="withdrawAccountNumber">
+              계좌번호
+              <input id="withdrawAccountNumber" name="withdrawAccountNumber" type="text" inputmode="numeric" placeholder="숫자만 입력" autocomplete="off" />
+            </label>
+            <label for="withdrawAccountHolder">
+              예금주
+              <input id="withdrawAccountHolder" name="withdrawAccountHolder" type="text" placeholder="예금주명을 입력하세요" autocomplete="name" />
+            </label>
+          </div>
+          <p class="biz-note">정산 신청 후 관리자 확인을 거쳐 처리됩니다.</p>
+          <button class="biz-action-button" type="button">신청하기</button>
+        </form>
+      </section>
+    </main>
+
+  </body>
+</html>

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>세움비즈 | 공지사항</title>
+    <meta name="description" content="세움비즈 공지사항 및 자주묻는 질문" />
+    <link rel="stylesheet" href="/css/common.css" />
+    <link rel="stylesheet" href="/css/support.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="site-brand" href="/" aria-label="세움비즈 홈">
+        <img data-site-logo alt="세움비즈 로고" />
+      </a>
+      <button class="mobile-menu-button" type="button" aria-controls="siteNav" aria-expanded="false" aria-label="메뉴 열기">☰</button>
+      <nav class="site-nav" id="siteNav" aria-label="주요 메뉴">
+        <a href="/index.html">상품권교환신청</a>
+        <a href="/vendor.html">업체매입신청</a>
+        <a href="/status.html">실시간매입현황</a>
+        <a href="/support.html" aria-current="page">공지사항</a>
+        <a href="/order.html">내주문조회</a>
+      </nav>
+    </header>
+
+    <main class="support-page">
+      <section class="support-hero" aria-labelledby="supportTitle">
+        <p class="support-eyebrow">Notice</p>
+        <h1 id="supportTitle">공지사항</h1>
+        <div class="support-guide" aria-label="운영 안내">
+          <p>운영시간: 연중무휴 24시간 운영</p>
+          <p>매일 23시45분~00시30분까지 은행 점검시간입니다.</p>
+          <p>점검 이후 순차적으로 입금처리 됩니다.</p>
+        </div>
+      </section>
+
+      <section class="support-content" aria-labelledby="noticeListTitle">
+        <div class="support-tabs" role="tablist" aria-label="공지사항 메뉴">
+          <button class="support-tab is-active" type="button" role="tab" aria-selected="true" data-support-tab="notice">공지사항</button>
+          <button class="support-tab" type="button" role="tab" aria-selected="false" data-support-tab="faq">자주묻는 질문</button>
+        </div>
+
+        <div class="notice-table-wrap" data-notice-panel>
+          <table class="notice-table">
+            <caption id="noticeListTitle">
+              세움비즈 공지사항 목록
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">번호</th>
+                <th scope="col">카테고리</th>
+                <th scope="col">제목</th>
+                <th scope="col">작성자</th>
+                <th scope="col">작성일</th>
+              </tr>
+            </thead>
+            <tbody data-notice-list></tbody>
+          </table>
+        </div>
+
+        <article class="notice-detail" data-notice-detail hidden></article>
+
+        <section class="faq-panel" data-faq-panel hidden>
+          <h2>자주묻는 질문</h2>
+          <div class="faq-list">
+            <article>
+              <h3>상품권 접수 후 입금까지 얼마나 걸리나요?</h3>
+              <p>접수 순서대로 확인 후 처리되며, 은행 점검시간에는 점검 이후 순차적으로 입금됩니다.</p>
+            </article>
+            <article>
+              <h3>핀번호를 잘못 입력하면 어떻게 하나요?</h3>
+              <p>입력 정보가 맞지 않으면 처리가 지연될 수 있으니 상담 채널로 문의해주세요.</p>
+            </article>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script type="module" src="/js/common.js"></script>
+    <script type="module" src="/js/support.js"></script>
+  </body>
+</html>

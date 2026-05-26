@@ -1,0 +1,15 @@
+{
+  "adbPath": "adb",
+  "deviceSerial": "",
+  "appPackage": "",
+  "appActivity": "",
+  "pinInputTap": {
+    "x": 0,
+    "y": 0
+  },
+  "registerButtonTap": {
+    "x": 0,
+    "y": 0
+  },
+  "delayMs": 800
+}

@@ -1,0 +1,40 @@
+.order-page {
+  width: min(720px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 44px 0 72px;
+}
+
+.order-panel {
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 28px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.order-panel h1 {
+  margin: 0 0 10px;
+}
+
+.order-panel p {
+  margin: 0;
+  color: var(--muted);
+}
+
+@media (max-width: 760px) {
+  .order-page {
+    width: min(100% - 28px, 640px);
+    padding: 24px 0 56px;
+  }
+
+  .order-panel {
+    border-radius: 17px;
+    padding: 22px;
+  }
+}
+
+@media (max-width: 520px) {
+  .order-panel {
+    padding: 18px;
+  }
+}

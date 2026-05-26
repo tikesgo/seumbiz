@@ -1,0 +1,307 @@
+diff --git a/status.js b/status.js
+--- a/status.js
++++ b/status.js
+@@
+-import { supabase } from "./supabaseClient.js";
+-
+-// Debug marker to confirm which status.js is loaded in the browser
+-console.log("status.js loaded ??EDITED_AT 2026-05-19");
++import { supabase } from "./supabaseClient.js";
+@@
+-const fallbackProgressItems = [
+-  { time: "?ㅻ뒛 20:42", giftType: "臾명솕?곹뭹沅?, amount: 50000, status: "?낃툑?꾨즺" },
+-  { time: "?ㅻ뒛 20:37", giftType: "援ш?湲고봽?몄뭅??, amount: 100000, status: "?낃툑?湲? },
+-  { time: "?ㅻ뒛 20:31", giftType: "?좎꽭怨꾩긽?덇텒", amount: 300000, status: "寃?섏쨷" },
+-  { time: "?ㅻ뒛 20:24", giftType: "濡?뜲紐⑤컮??, amount: 30000, status: "?묒닔?꾨즺" },
+-  { time: "?ㅻ뒛 20:18", giftType: "?댄뵾癒몃땲", amount: 50000, status: "?낃툑?꾨즺" },
+-  { time: "?ㅻ뒛 20:09", giftType: "?꾩꽌臾명솕?곹뭹沅?, amount: 10000, status: "寃?섏쨷" },
+-  { time: "?ㅻ뒛 19:56", giftType: "?ㅼ씠踰꾪럹??, amount: 100000, status: "?낃툑?꾨즺" },
+-  { time: "?ㅻ뒛 19:48", giftType: "諛곕??곹뭹沅?, amount: 30000, status: "?낃툑?湲? },
+-];
++const fallbackProgressItems = [
++  { time: "오늘 20:42", giftType: "문화상품권", amount: 50000, status: "입금완료", imageUrl: "" },
++  { time: "오늘 20:37", giftType: "구글기프트카드", amount: 100000, status: "입금대기", imageUrl: "" },
++  { time: "오늘 20:31", giftType: "신세계상품권", amount: 300000, status: "검수중", imageUrl: "" },
++  { time: "오늘 20:24", giftType: "롯데모바일", amount: 30000, status: "접수완료", imageUrl: "" },
++  { time: "오늘 20:18", giftType: "네이버페이", amount: 50000, status: "입금완료", imageUrl: "" },
++];
+@@
+-const formatWon = (value) => `${value.toLocaleString("ko-KR")}??;
++const formatWon = (value) => `${Number(value || 0).toLocaleString("ko-KR")}원`;
+@@
+-const normalizeOrder = (order) => {
+-  const items = order.items || [];
++const normalizeKey = (value) =>
++  String(value || "")
++    .toLowerCase()
++    .replace(/\s+/g, "")
++    .trim();
++
++const resolveImageUrl = (url) => {
++  if (!url) return "";
++  const rawUrl = String(url).trim();
++  if (!rawUrl) return "";
++
++  try {
++    const parsed = new URL(rawUrl, location.origin);
++    if (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1") {
++      return `${location.origin}${parsed.pathname}${parsed.search}${parsed.hash}`;
++    }
++    return parsed.href;
++  } catch {
++    if (rawUrl.startsWith("/")) return `${location.origin}${rawUrl}`;
++    return rawUrl;
++  }
++};
++
++const giftLogoMap = new Map();
++
++const loadGiftLogos = async () => {
++  const { data, error } = await supabase
++    .from("gift_cards")
++    .select("id,name,slug,image_url,is_active")
++    .eq("is_active", true);
++
++  if (error || !Array.isArray(data)) return giftLogoMap;
++
++  data.forEach((card) => {
++    const imageUrl = resolveImageUrl(card.image_url);
++    if (!imageUrl) return;
++
++    [card.name, card.slug, card.id].forEach((key) => {
++      const normalized = normalizeKey(key);
++      if (normalized) giftLogoMap.set(normalized, imageUrl);
++    });
++  });
++
++  return giftLogoMap;
++};
++
++const findLogoForName = (giftType) => {
++  const normalizedGiftType = normalizeKey(giftType);
++  if (!normalizedGiftType) return "";
++  if (giftLogoMap.has(normalizedGiftType)) return giftLogoMap.get(normalizedGiftType);
++  for (const [key, imageUrl] of giftLogoMap.entries()) {
++    if (normalizedGiftType.includes(key) || key.includes(normalizedGiftType)) return imageUrl;
++  }
++  return "";
++};
++
++const getOrderItems = (order) => {
++  if (Array.isArray(order.items)) return order.items;
++  if (typeof order.items === "string") {
++    try {
++      const parsed = JSON.parse(order.items);
++      return Array.isArray(parsed) ? parsed : [];
++    } catch {
++      return [];
++    }
++  }
++  return [];
++};
++
++const normalizeOrder = (order) => {
++  const items = getOrderItems(order);
+   const firstItem = items[0] || {};
+-  const firstGiftName = firstItem.productName || firstItem.product_name || "?곹뭹沅?;
+-  const giftType = items.length > 1 ? `${firstGiftName} ??${items.length - 1}嫄? : firstGiftName;
++  const firstGiftName =
++    firstItem.productName ||
++    firstItem.product_name ||
++    order.product_name ||
++    order.gift_type ||
++    order.giftType ||
++    "상품권";
++  const giftType = items.length > 1 ? `${firstGiftName} 외 ${items.length - 1}건` : firstGiftName;
++  const amount =
++    order.total_amount ??
++    order.totalAmount ??
++    firstItem.amount ??
++    order.amount ??
++    0;
+ 
+   return {
+-    time: formatTime(order.requested_at || order.created_at || order.requestedAt || new Date()),
++    time: formatTime(order.requested_at || order.created_at || order.requestedAt),
+     giftType,
+-    amount: Number(order.total_amount ?? order.totalAmount ?? 0),
+-    status: order.status || "?묒닔?꾨즺",
++    amount: Number(amount) || 0,
++    status: order.status || "접수완료",
++    imageUrl: resolveImageUrl(firstItem.image_url || firstItem.imageUrl || findLogoForName(firstGiftName)),
+   };
+ };
+@@
+-let giftLogoMap = null;
+-
+-const resolveImageUrl = (url) => {
+-  ...
+-};
+-
+-const loadGiftLogos = async () => {
+-  ...
+-};
+-
+-const findLogoForName = (giftType) => {
+-  ...
+-};
+-
+-const unmatchedLogged = new Set();
++const renderProductLogo = (item) => {
++  const imageUrl = item.imageUrl || findLogoForName(item.giftType);
++  if (!imageUrl) return "";
++
++  return `
++    <span class="status-product-icon" aria-hidden="true">
++      <img class="status-product-logo" src="${imageUrl}" alt="" onerror="this.closest('.status-product-icon').remove()" />
++    </span>
++  `;
++};
+ 
+ const renderProgressItems = (progressItems) => {
+-  const items = progressItems
+-    .map((item) => {
+-      const iconPath = findLogoForName(item.giftType || "");
+-      ...
+-      return html;
+-    })
+-    .join("");
+-
+-  statusList.innerHTML = items;
++  statusList.innerHTML = progressItems
++    .map(
++      (item) => `
++        <article class="status-item">
++          <span class="status-time">${item.time}</span>
++          <strong class="status-product">
++            ${renderProductLogo(item)}
++            <span class="status-product-name">${item.giftType}</span>
++          </strong>
++          <span class="status-amount">${formatWon(item.amount)}</span>
++          <span class="status-badge" data-status="${item.status}">${item.status}</span>
++        </article>
++      `,
++    )
++    .join("");
+ };
+@@
+ const initStatusPage = async () => {
+   await loadGiftLogos();
+-  renderProgressItems(await loadProgressItems());
++  const progressItems = await loadProgressItems();
++  renderProgressItems(progressItems);
+ };
+diff --git a/styles.css b/styles.css
+--- a/styles.css
++++ b/styles.css
+@@
++/* Remove stale status detail overrides:
++   - .status-page .status-item-meta blocks
++   - repeated .status-page .status-badge width-only blocks
++   - older appended "Status detail page grid alignment" blocks
++*/
++
++/* Status page final layout */
++.status-page .status-list {
++  display: grid !important;
++  gap: 10px !important;
++}
++
++.status-page .status-item {
++  display: grid !important;
++  grid-template-columns: 140px minmax(0, 1fr) 160px 100px !important;
++  align-items: center !important;
++  gap: 16px !important;
++  padding: 14px 18px !important;
++}
++
++.status-page .status-time {
++  grid-column: 1 !important;
++  min-width: 0 !important;
++  white-space: nowrap !important;
++}
++
++.status-page .status-product {
++  grid-column: 2 !important;
++  display: flex !important;
++  align-items: center !important;
++  gap: 10px !important;
++  min-width: 0 !important;
++  overflow: hidden !important;
++}
++
++.status-page .status-product-icon {
++  width: 30px !important;
++  height: 30px !important;
++  min-width: 30px !important;
++  border-radius: 10px !important;
++  overflow: hidden !important;
++  display: inline-flex !important;
++  align-items: center !important;
++  justify-content: center !important;
++  background: #fff !important;
++  border: 1px solid #e6edf7 !important;
++}
++
++.status-page .status-product-logo {
++  width: 100% !important;
++  height: 100% !important;
++  object-fit: contain !important;
++  display: block !important;
++}
++
++.status-page .status-product-name {
++  min-width: 0 !important;
++  overflow: hidden !important;
++  text-overflow: ellipsis !important;
++  white-space: nowrap !important;
++}
++
++.status-page .status-amount {
++  grid-column: 3 !important;
++  width: 160px !important;
++  justify-self: end !important;
++  text-align: right !important;
++  white-space: nowrap !important;
++}
++
++.status-page .status-badge {
++  grid-column: 4 !important;
++  width: 100px !important;
++  min-width: 100px !important;
++  justify-self: end !important;
++  box-sizing: border-box !important;
++  text-align: center !important;
++  white-space: nowrap !important;
++}
++
++@media (max-width: 640px) {
++  .status-page .status-item {
++    grid-template-columns: minmax(0, 1fr) auto !important;
++    grid-template-areas:
++      "time badge"
++      "product amount" !important;
++    gap: 8px 12px !important;
++    padding: 12px 14px !important;
++  }
++
++  .status-page .status-time {
++    grid-area: time !important;
++  }
++
++  .status-page .status-product {
++    grid-area: product !important;
++  }
++
++  .status-page .status-amount {
++    grid-area: amount !important;
++    width: auto !important;
++    justify-self: end !important;
++  }
++
++  .status-page .status-badge {
++    grid-area: badge !important;
++    width: auto !important;
++    min-width: 72px !important;
++  }
++}

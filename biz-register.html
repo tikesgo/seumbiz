@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>세움비즈 | 상품권 등록</title>
+    <meta name="description" content="세움비즈 업체 전용 상품권 등록 화면" />
+    <link rel="stylesheet" href="/css/common.css" />
+    <link rel="stylesheet" href="/css/biz.css" />
+  </head>
+  <body class="biz-body">
+    <header class="site-header biz-header">
+      <a class="site-brand" href="/biz-dashboard.html" aria-label="세움비즈 업체 대시보드 홈">
+        <img src="/assets/site-logo.png" alt="세움비즈 로고" />
+      </a>
+      <button class="mobile-menu-button" type="button" aria-controls="siteNav" aria-expanded="false" aria-label="메뉴 열기">☰</button>
+      <nav class="site-nav" id="siteNav" aria-label="업체 전용 메뉴">
+        <a href="/biz-dashboard.html">대시보드</a>
+        <a href="/biz-register.html" aria-current="page">상품권등록</a>
+        <a href="/biz-points.html">포인트내역</a>
+        <a href="/biz-withdraw.html">정산신청</a>
+        <a href="/biz-history.html">이용내역</a>
+        <a href="/support.html">고객센터</a>
+      </nav>
+    </header>
+
+    <main class="biz-page">
+      <section class="biz-hero" aria-labelledby="bizRegisterTitle">
+        <p class="biz-eyebrow">Gift Card Register</p>
+        <h1 id="bizRegisterTitle">상품권 등록</h1>
+        <p>업체 보유 상품권 정보를 등록하는 화면입니다. 현재는 화면 목업이며 저장 로직은 연결되어 있지 않습니다.</p>
+      </section>
+
+      <section class="panel biz-section" aria-labelledby="giftCardRegisterFormTitle">
+        <div class="biz-section-head">
+          <div>
+            <h2 id="giftCardRegisterFormTitle">등록 정보</h2>
+            <p>등록 후 관리자 검수 완료 시 포인트가 적립됩니다.</p>
+          </div>
+        </div>
+        <form class="biz-form" id="bizGiftCardRegisterForm">
+          <div class="biz-form-grid">
+            <label for="giftCardType">
+              상품권 종류
+              <select id="giftCardType" name="giftCardType">
+                <option value="">선택해주세요</option>
+                <option value="shinsegae">신세계상품권</option>
+                <option value="lotte-mobile">롯데모바일상품권</option>
+                <option value="culture">문화상품권</option>
+              </select>
+            </label>
+            <label for="giftCardSerialNumber">
+              일련번호
+              <input id="giftCardSerialNumber" name="giftCardSerialNumber" type="text" placeholder="일련번호를 입력하세요" autocomplete="off" />
+            </label>
+            <label for="giftCardFaceValue">
+              액면가
+              <input id="giftCardFaceValue" name="giftCardFaceValue" type="number" inputmode="numeric" placeholder="예: 100000" />
+            </label>
+            <label for="giftCardQuantity">
+              수량
+              <input id="giftCardQuantity" name="giftCardQuantity" type="number" inputmode="numeric" min="1" placeholder="예: 1" />
+            </label>
+            <label class="biz-field-wide" for="giftCardMemo">
+              메모
+              <textarea id="giftCardMemo" name="giftCardMemo" placeholder="관리자에게 전달할 내용을 입력하세요"></textarea>
+            </label>
+          </div>
+          <p class="biz-note">등록 후 관리자 검수 완료 시 포인트가 적립됩니다.</p>
+          <button class="biz-action-button" type="button">등록하기</button>
+        </form>
+      </section>
+    </main>
+
+  </body>
+</html>

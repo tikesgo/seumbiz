@@ -1,0 +1,373 @@
+.biz-body {
+  padding-bottom: 0;
+}
+
+.biz-page {
+  width: min(100% - 32px, 1120px);
+  margin: 0 auto;
+  padding: 28px 0 16px;
+}
+
+.biz-header .site-brand img {
+  width: auto;
+  height: 54px;
+  max-width: 320px;
+  object-fit: contain;
+}
+
+.biz-header .site-nav {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.biz-header .site-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.biz-hero {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.biz-eyebrow {
+  margin: 0;
+  color: #2478ff;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.biz-hero h1 {
+  margin: 0;
+  color: #10233f;
+  font-size: clamp(28px, 6vw, 42px);
+  line-height: 1.14;
+}
+
+.biz-hero p:last-child {
+  max-width: 640px;
+  margin: 0;
+  color: #667085;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.biz-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.biz-section {
+  padding: 18px;
+}
+
+.biz-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.biz-section-head h2 {
+  margin: 0;
+  color: #10233f;
+  font-size: 20px;
+}
+
+.biz-section-head p {
+  margin: 6px 0 0;
+  color: #667085;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.biz-card-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.biz-stat-card {
+  border: 1px solid rgba(213, 222, 235, 0.95);
+  border-radius: 16px;
+  padding: 16px;
+  background: #fff;
+}
+
+.biz-stat-card span {
+  display: block;
+  color: #667085;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.biz-stat-card strong {
+  display: block;
+  margin-top: 10px;
+  color: #102a56;
+  font-size: 26px;
+  line-height: 1.1;
+}
+
+.biz-stat-card small {
+  display: block;
+  margin-top: 8px;
+  color: #7b8798;
+  font-size: 12px;
+}
+
+.biz-action-button,
+.biz-secondary-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 0;
+  border-radius: var(--radius-button);
+  padding: 0 18px;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.biz-action-button {
+  color: #fff;
+  background: #155eef;
+  box-shadow: 0 10px 22px rgba(21, 94, 239, 0.18);
+}
+
+.biz-secondary-link {
+  color: #155eef;
+  background: #eaf2ff;
+}
+
+.biz-table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(213, 222, 235, 0.95);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.biz-table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+  color: #344054;
+  font-size: 14px;
+}
+
+.biz-table caption {
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  clip: rect(0 0 0 0);
+}
+
+.biz-table th,
+.biz-table td {
+  border-bottom: 1px solid rgba(229, 235, 243, 0.95);
+  padding: 13px 14px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.biz-table th {
+  color: #475467;
+  background: #f8fbff;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.biz-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.biz-form {
+  display: grid;
+  gap: 14px;
+}
+
+.biz-form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.biz-form label {
+  display: grid;
+  gap: 8px;
+  color: #344054;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.biz-form input,
+.biz-form select,
+.biz-form textarea {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #d8e2ef;
+  border-radius: var(--radius-control);
+  padding: 0 13px;
+  color: #172033;
+  background: #fff;
+  outline: 0;
+}
+
+.biz-form textarea {
+  min-height: 108px;
+  padding: 12px 13px;
+  resize: vertical;
+}
+
+.biz-form input:focus,
+.biz-form select:focus,
+.biz-form textarea:focus {
+  border-color: rgba(36, 120, 255, 0.72);
+  box-shadow: 0 0 0 4px rgba(36, 120, 255, 0.1);
+}
+
+.biz-note {
+  margin: 0;
+  border: 1px solid rgba(36, 120, 255, 0.16);
+  border-radius: 14px;
+  padding: 12px 14px;
+  color: #28507d;
+  background: #f5f9ff;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.biz-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  border-radius: 999px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.biz-badge--waiting,
+.biz-badge--settling {
+  color: #815b00;
+  background: #fff6d8;
+}
+
+.biz-badge--approved,
+.biz-badge--done,
+.biz-badge--earned {
+  color: #08603a;
+  background: #dcfae6;
+}
+
+.biz-badge--rejected,
+.biz-badge--deducted {
+  color: #b42318;
+  background: #fee4e2;
+}
+
+.biz-badge--canceled {
+  color: #475467;
+  background: #eef2f6;
+}
+
+.biz-balance-card {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(21, 94, 239, 0.14);
+  border-radius: 16px;
+  padding: 18px;
+  color: #102a56;
+  background: linear-gradient(180deg, #ffffff 0%, #f4f8ff 100%);
+}
+
+.biz-balance-card span {
+  color: #667085;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.biz-balance-card strong {
+  font-size: 32px;
+  line-height: 1.1;
+}
+
+@media (min-width: 720px) {
+  .biz-page {
+    padding-top: 38px;
+  }
+
+  .biz-card-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .biz-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .biz-form label.biz-field-wide {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .biz-page {
+    width: min(100% - 24px, 1120px);
+    padding-top: 22px;
+  }
+
+  .biz-section {
+    padding: 15px;
+  }
+
+  .biz-section-head {
+    display: grid;
+  }
+
+  .biz-action-button,
+  .biz-secondary-link {
+    width: 100%;
+  }
+
+  .biz-stat-card strong,
+  .biz-balance-card strong {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .biz-body {
+    padding-top: 116px;
+  }
+
+  .biz-header {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .biz-header .mobile-menu-button {
+    display: none;
+  }
+
+  .biz-header .site-nav {
+    display: flex;
+    grid-column: 1;
+    width: 100%;
+    border-top: 1px solid rgba(229, 235, 243, 0.92);
+    padding-top: 7px;
+  }
+
+  .biz-header .site-nav a {
+    flex: 0 0 auto;
+  }
+
+  .biz-header .site-brand img {
+    height: 38px;
+    max-width: 220px;
+  }
+}

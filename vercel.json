@@ -1,0 +1,34 @@
+{
+  "cleanUrls": false,
+  "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/status",
+      "destination": "/status.html"
+    },
+    {
+      "source": "/order",
+      "destination": "/order.html"
+    },
+    {
+      "source": "/support",
+      "destination": "/support.html"
+    },
+    {
+      "source": "/vendor",
+      "destination": "/vendor.html"
+    },
+    {
+      "source": "/notice",
+      "destination": "/support.html"
+    },
+    {
+      "source": "/bulk",
+      "destination": "/bulk.html"
+    },
+    {
+      "source": "/index",
+      "destination": "/index.html"
+    }
+  ]
+}
