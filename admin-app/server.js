@@ -18,6 +18,7 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const adminPassword = process.env.ADMIN_PASSWORD || "";
 const openAiApiKey = process.env.OPENAI_API_KEY || "";
 const openAiOcrModel = process.env.OPENAI_OCR_MODEL || "gpt-4o-mini";
+const OCR_CONCURRENCY = 3;
 const telegramBotToken = process.env.TELEGRAM_BOT_TOKEN || "";
 const telegramChatId = process.env.TELEGRAM_CHAT_ID || "";
 const statusValues = new Set(["\uC2B9\uC778", "\uB300\uAE30", "\uCDE8\uC18C"]);
@@ -1684,65 +1685,52 @@ async function handleSeumBizOcrGiftcard(req, res) {
       return;
     }
 
+    const requestStartedAt = Date.now();
+    console.log("[SEUMBiz OCR] request start", {
+      imageCount: files.length,
+      concurrency: OCR_CONCURRENCY,
+      companyId: context.user.company_id,
+      model: openAiOcrModel
+    });
+
+    for (const file of files) {
+      console.log("[SEUMBiz OCR] file queued", {
+        imageName: file.name,
+        mimeType: file.mimeType || "unknown",
+        size: file.data?.length || 0,
+        validationError: file.validationError || ""
+      });
+    }
+
+    const fileResults = await mapWithConcurrency(files, OCR_CONCURRENCY, (file) => processOcrGiftcardFile(file));
+
     const items = [];
     const failures = [];
-    for (const file of files) {
-      if (file.validationError) {
-        failures.push({
-          image_name: file.name,
-          message: file.validationError
-        });
-        items.push(
-          normalizeOcrResultItem(
-            {
-              warning: file.validationError,
-              failed: true
-            },
-            file
-          )
-        );
-        continue;
-      }
+    let successCount = 0;
 
-      try {
-        const result = await callOpenAiGiftcardOcr(file);
-        const resultItems = Array.isArray(result?.items) ? result.items : [];
-        if (!resultItems.length) {
-          items.push(normalizeOcrResultItem({ warning: "PIN 번호를 찾지 못했습니다.", raw_text: result?.raw_text || "" }, file));
-        } else {
-          for (const item of resultItems) {
-            items.push(normalizeOcrResultItem(item, file));
-          }
-        }
-      } catch (error) {
-        const message = String(error.message || error);
-        failures.push({
-          image_name: file.name,
-          message
-        });
-        console.error("[SEUMBiz OCR File Error]", {
-          imageName: file.name,
-          message
-        });
-        items.push(
-          normalizeOcrResultItem(
-            {
-              warning: `OCR 실패: ${message}`,
-              failed: true
-            },
-            file
-          )
-        );
-      }
+    for (const result of fileResults) {
+      items.push(...result.items);
+      if (result.failure) failures.push(result.failure);
+      if (!result.fileFailed) successCount += 1;
     }
+
+    const totalElapsedMs = Date.now() - requestStartedAt;
+    console.log("[SEUMBiz OCR] request complete", {
+      imageCount: files.length,
+      totalElapsedMs,
+      successCount,
+      failureCount: failures.length,
+      itemCount: items.length
+    });
 
     sendApiJson(res, 200, {
       ok: true,
       items,
       failures,
       processedCount: files.length,
-      successCount: files.length - failures.length,
-      failureCount: failures.length
+      successCount,
+      failureCount: failures.length,
+      elapsedMs: totalElapsedMs
     });
   } catch (error) {
     console.error("[SEUMBiz OCR Upload Error]", {
@@ -1750,6 +1738,132 @@ async function handleSeumBizOcrGiftcard(req, res) {
     });
     sendApiJson(res, 400, { ok: false, message: String(error.message || error) });
   }
+}
+
+async function mapWithConcurrency(items, concurrency, worker) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+
+  async function runWorker() {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      results[currentIndex] = await worker(items[currentIndex], currentIndex);
+    }
+  }
+
+  const workerCount = Math.min(Math.max(concurrency, 1), items.length);
+  await Promise.all(Array.from({ length: workerCount }, () => runWorker()));
+  return results;
+}
+
+async function processOcrGiftcardFile(file) {
+  const fileStartedAt = Date.now();
+  const imageName = file.name || "unknown";
+
+  if (file.validationError) {
+    const item = normalizeOcrResultItem(
+      {
+        warning: file.validationError,
+        failed: true
+      },
+      file,
+      { source: "validation" }
+    );
+    console.log("[SEUMBiz OCR] file result", {
+      imageName,
+      elapsedMs: Date.now() - fileStartedAt,
+      failed: true,
+      errorType: item.error_type,
+      warning: item.warning
+    });
+    return {
+      items: [item],
+      failure: {
+        image_name: imageName,
+        message: file.validationError,
+        error_type: "invalid_file"
+      },
+      fileFailed: true
+    };
+  }
+
+  try {
+    const result = await callOpenAiGiftcardOcr(file);
+    const resultItems = Array.isArray(result?.items) ? result.items : [];
+    const normalizedItems = [];
+
+    if (!resultItems.length) {
+      normalizedItems.push(
+        normalizeOcrResultItem(
+          { warning: "PIN 번호를 찾지 못했습니다.", raw_text: result?.raw_text || "" },
+          file,
+          { source: "openai" }
+        )
+      );
+    } else {
+      for (const item of resultItems) {
+        normalizedItems.push(normalizeOcrResultItem(item, file, { source: "openai" }));
+      }
+    }
+
+    for (const item of normalizedItems) {
+      console.log("[SEUMBiz OCR] file result", {
+        imageName,
+        elapsedMs: Date.now() - fileStartedAt,
+        failed: item.failed,
+        errorType: item.error_type,
+        pinMasked: maskPinForOcrLog(item.pin_no),
+        face_value: item.face_value,
+        warning: item.warning
+      });
+    }
+
+    return {
+      items: normalizedItems,
+      failure: null,
+      fileFailed: false
+    };
+  } catch (error) {
+    const message = truncateOcrLogMessage(String(error.message || error));
+    const item = normalizeOcrResultItem(
+      {
+        warning: `OCR 서버 오류: ${message}`,
+        failed: true
+      },
+      file,
+      { source: "openai_error" }
+    );
+
+    console.error("[SEUMBiz OCR File Error]", {
+      imageName,
+      elapsedMs: Date.now() - fileStartedAt,
+      message,
+      errorType: item.error_type
+    });
+
+    return {
+      items: [item],
+      failure: {
+        image_name: imageName,
+        message,
+        error_type: "openai_error"
+      },
+      fileFailed: true
+    };
+  }
+}
+
+function maskPinForOcrLog(pin) {
+  const digits = String(pin || "").replace(/\D/g, "");
+  if (!digits) return "(empty)";
+  if (digits.length <= 4) return `***${digits}`;
+  return `***${digits.slice(-4)}`;
+}
+
+function truncateOcrLogMessage(message, maxLength = 500) {
+  const value = String(message || "").replace(/sk-[A-Za-z0-9_-]+/g, "[REDACTED_KEY]");
+  return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
 }
 
 async function handleSeumBizPurchaseTelegramNotification(req, res) {
@@ -2066,6 +2180,15 @@ function formatSeumBizDateTimeKorean(value) {
 }
 
 async function callOpenAiGiftcardOcr(file) {
+  const imageName = file.name || "unknown";
+  const openAiStartedAt = Date.now();
+  console.log("[SEUMBiz OCR] OpenAI call start", {
+    imageName,
+    model: openAiOcrModel,
+    mimeType: file.mimeType,
+    size: file.data?.length || 0
+  });
+
   const dataUrl = `data:${file.mimeType};base64,${file.data.toString("base64")}`;
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
@@ -2124,18 +2247,49 @@ async function callOpenAiGiftcardOcr(file) {
     })
   });
 
+  const openAiElapsedMs = Date.now() - openAiStartedAt;
+  console.log("[SEUMBiz OCR] OpenAI call end", {
+    imageName,
+    httpStatus: response.status,
+    elapsedMs: openAiElapsedMs
+  });
+
   if (!response.ok) {
     const message = await response.text();
+    console.error("[SEUMBiz OCR] OpenAI HTTP error", {
+      imageName,
+      httpStatus: response.status,
+      message: truncateOcrLogMessage(message)
+    });
     throw new Error(message || `OpenAI HTTP ${response.status}`);
   }
 
   const data = await response.json();
   const text = extractOpenAiOutputText(data);
+  console.log("[SEUMBiz OCR] OpenAI output", {
+    imageName,
+    outputTextLength: text.length
+  });
+
   if (!text) {
     throw new Error("OpenAI OCR 응답이 비어 있습니다.");
   }
 
-  return JSON.parse(stripJsonFence(text));
+  try {
+    const parsed = JSON.parse(stripJsonFence(text));
+    console.log("[SEUMBiz OCR] JSON parse success", {
+      imageName,
+      itemCount: Array.isArray(parsed?.items) ? parsed.items.length : 0
+    });
+    return parsed;
+  } catch (error) {
+    console.error("[SEUMBiz OCR] JSON parse failed", {
+      imageName,
+      message: error.message || String(error),
+      outputTextLength: text.length
+    });
+    throw error;
+  }
 }
 
 function extractOpenAiOutputText(data) {
@@ -2159,11 +2313,11 @@ function stripJsonFence(value) {
     .trim();
 }
 
-function normalizeOcrResultItem(item, file) {
+function normalizeOcrResultItem(item, file, options = {}) {
   const pin = String(item?.pin_no || "").replace(/\D/g, "").slice(0, 16);
   const faceValue = normalizeOcrFaceValue(item?.face_value);
   const confidence = item?.confidence === null || item?.confidence === undefined ? null : Number(item.confidence);
-  return {
+  const normalized = {
     image_name: file.name,
     pin_no: pin,
     face_value: faceValue,
@@ -2172,6 +2326,36 @@ function normalizeOcrResultItem(item, file) {
     raw_text: String(item?.raw_text || "").trim(),
     failed: Boolean(item?.failed)
   };
+  normalized.error_type = resolveOcrErrorType(normalized, options.source);
+  return normalized;
+}
+
+function resolveOcrErrorType(item, source = "") {
+  if (source === "validation") return "invalid_file";
+  if (source === "openai_error" || item.failed) {
+    const warning = String(item.warning || "").toLowerCase();
+    if (
+      warning.includes("rate limit") ||
+      warning.includes("rate_limit") ||
+      warning.includes("429") ||
+      warning.includes("too many requests")
+    ) {
+      return "openai_rate_limit";
+    }
+    return "openai_error";
+  }
+
+  const pin = String(item.pin_no || "").replace(/\D/g, "");
+  const warning = String(item.warning || "");
+
+  if (!pin) {
+    if (warning.includes("PIN 번호를 찾지 못했습니다")) return "pin_not_found";
+    return "pin_not_found";
+  }
+
+  if (pin.length !== 16) return "pin_format";
+  if (!item.face_value) return "amount_missing";
+  return null;
 }
 
 function normalizeOcrFaceValue(value) {

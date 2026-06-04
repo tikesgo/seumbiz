@@ -60,6 +60,17 @@ let isAuthReady = Boolean(window.SEUMBizAuth?.companyId);
 const LOGIN_EXPIRED_MESSAGE = "\uB85C\uADF8\uC778\uC774 \uB9CC\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uB2E4\uC2DC \uB85C\uADF8\uC778\uD574\uC8FC\uC138\uC694.";
 const AUTH_WAIT_MESSAGE = "\uB85C\uADF8\uC778 \uC815\uBCF4\uB97C \uD655\uC778\uD558\uB294 \uC911\uC785\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.";
 const OCR_AMOUNT_PENDING_STATUS = "\uAE08\uC561 \uBBF8\uD655\uC815";
+const OCR_UPLOAD_BATCH_SIZE = 3;
+const OCR_MAX_FILES = 10;
+
+const OCR_ERROR_LABELS = {
+  openai_error: { label: "OCR 서버 오류", className: "is-error" },
+  openai_rate_limit: { label: "API 제한", className: "is-api-limit" },
+  invalid_file: { label: "이미지 형식 오류", className: "is-error" },
+  pin_not_found: { label: "PIN 미검출", className: "is-error" },
+  pin_format: { label: "형식 오류", className: "is-error" },
+  amount_missing: { label: "금액 미확정", className: "is-warning" },
+};
 
 const escapeHtml = (value) =>
   String(value ?? "")
@@ -537,8 +548,8 @@ const validateOcrFiles = (files) => {
     return false;
   }
 
-  if (files.length > 10) {
-    setOcrStatus("OCR 이미지는 한 번에 최대 10장까지 등록할 수 있습니다.", "error");
+  if (files.length > OCR_MAX_FILES) {
+    setOcrStatus(`OCR 이미지는 한 번에 최대 ${OCR_MAX_FILES}장까지 등록할 수 있습니다.`, "error");
     return false;
   }
 
@@ -559,6 +570,12 @@ const validateOcrFiles = (files) => {
 const getOcrReviewStatus = (item) => {
   const pin = normalizePin(item.pin_no);
   const faceValue = Number(item.face_value) || 0;
+  const errorType = String(item.error_type || "").trim();
+
+  if (errorType && OCR_ERROR_LABELS[errorType]) {
+    return OCR_ERROR_LABELS[errorType];
+  }
+
   const warning = String(item.warning || "");
   const warningText = warning.toLowerCase();
 
@@ -569,7 +586,7 @@ const getOcrReviewStatus = (item) => {
       warningText.includes("429") ||
       warningText.includes("too many requests"))
   ) {
-    return { label: "API 제한", className: "is-api-limit" };
+    return OCR_ERROR_LABELS.openai_rate_limit;
   }
 
   if (
@@ -579,12 +596,13 @@ const getOcrReviewStatus = (item) => {
       warning.includes("JPG, PNG, WEBP") ||
       warning.includes("5MB"))
   ) {
-    return { label: "이미지 형식 오류", className: "is-error" };
+    return OCR_ERROR_LABELS.invalid_file;
   }
 
-  if (item.failed && !pin) return { label: "OCR 실패", className: "is-error" };
-  if (!isValidPin(pin)) return { label: "형식 오류", className: "is-error" };
-  if (!faceValue) return { label: "금액 미확정", className: "is-warning" };
+  if (item.failed) return OCR_ERROR_LABELS.openai_error;
+  if (!pin || warning.includes("PIN 번호를 찾지 못했습니다")) return OCR_ERROR_LABELS.pin_not_found;
+  if (!isValidPin(pin)) return OCR_ERROR_LABELS.pin_format;
+  if (!faceValue) return OCR_ERROR_LABELS.amount_missing;
   if (selectedGiftcard?.enabled_amounts?.length && !selectedGiftcard.enabled_amounts.includes(faceValue)) {
     return { label: "검토 필요", className: "is-warning" };
   }
@@ -593,6 +611,10 @@ const getOcrReviewStatus = (item) => {
 };
 
 const getOcrReviewMetaMessage = (item, confidence) => {
+  const errorType = String(item.error_type || "").trim();
+  const userMessage = getOcrUserMessage(errorType, item);
+  if (userMessage) return userMessage;
+
   const warning = String(item.warning || "");
   const warningText = warning.toLowerCase();
   if (
@@ -605,6 +627,25 @@ const getOcrReviewMetaMessage = (item, confidence) => {
     return "OpenAI 처리 제한으로 잠시 후 다시 시도해주세요.";
   }
   return `신뢰도 ${confidence}${warning ? ` · ${warning}` : ""}`;
+};
+
+const getOcrUserMessage = (errorType, item) => {
+  switch (errorType) {
+    case "openai_error":
+      return item.warning ? String(item.warning) : "OCR 서버 오류가 발생했습니다.";
+    case "openai_rate_limit":
+      return "OpenAI 처리 제한으로 잠시 후 다시 시도해주세요.";
+    case "invalid_file":
+      return "JPG, PNG, WEBP 형식만 지원합니다.";
+    case "pin_not_found":
+      return "PIN 번호를 찾지 못했습니다.";
+    case "pin_format":
+      return "16자리 PIN 번호를 확인해 주세요.";
+    case "amount_missing":
+      return "금액 미확정. 관리자 승인 시 입력 가능합니다.";
+    default:
+      return "";
+  }
 };
 
 const renderOcrReviewItems = () => {
@@ -686,31 +727,65 @@ const normalizeOcrResponseItems = (items, giftType) =>
     warning: item.warning || "",
     raw_text: item.raw_text || "",
     failed: Boolean(item.failed),
+    error_type: item.error_type || "",
     giftcard_code: giftType.code,
     giftcard_type: giftType.label,
     giftcard_logo_url: giftType.logo_url,
     source: "ocr",
   }));
 
-const getOcrResultMessage = (payload, itemCount) => {
-  const failureCount = Number(payload?.failureCount || 0);
-  const processedCount = Number(payload?.processedCount || 0);
-  const successCount = Number(payload?.successCount || 0);
+const countOcrReviewOutcome = (items) => {
+  const successCount = (items || []).filter((item) => isValidPin(item.pin_no)).length;
+  return {
+    successCount,
+    failureCount: Math.max((items || []).length - successCount, 0),
+  };
+};
 
-  if (!itemCount) {
+const getOcrResultMessage = (summary) => {
+  const failureCount = Number(summary?.failureCount || 0);
+  const successCount = Number(summary?.successCount || 0);
+  const processedCount = Number(summary?.processedCount || 0);
+  const itemCount = Number(summary?.itemCount || 0);
+  const elapsedMs = Number(summary?.elapsedMs || 0);
+  const elapsedLabel = elapsedMs > 0 ? ` (${(elapsedMs / 1000).toFixed(1)}초)` : "";
+
+  if (!itemCount && !processedCount) {
     return failureCount
-      ? `${failureCount.toLocaleString("ko-KR")}개 이미지 OCR이 실패했습니다. 실패 파일을 확인해주세요.`
+      ? `실패 ${failureCount.toLocaleString("ko-KR")}건. 실패 이미지는 아래 카드에서 사유를 확인해주세요.${elapsedLabel}`
       : "OCR 결과가 없습니다. 이미지를 다시 확인해주세요.";
   }
 
-  if (failureCount) {
-    const base = processedCount
-      ? `${processedCount.toLocaleString("ko-KR")}개 중 ${successCount.toLocaleString("ko-KR")}개 이미지 OCR 결과를 불러왔습니다.`
-      : "일부 이미지 OCR 결과를 불러왔습니다.";
-    return `${base} 실패 파일은 결과 카드에서 확인해주세요.`;
+  if (failureCount && successCount) {
+    return `성공 ${successCount.toLocaleString("ko-KR")}건 · 실패 ${failureCount.toLocaleString("ko-KR")}건${elapsedLabel}. 실패 이미지는 아래 카드에서 사유를 확인해주세요.`;
   }
 
-  return "OCR 결과를 확인하고 필요한 부분을 수정해주세요.";
+  if (failureCount) {
+    return `실패 ${failureCount.toLocaleString("ko-KR")}건${elapsedLabel}. 실패 이미지는 아래 카드에서 사유를 확인해주세요.`;
+  }
+
+  return `성공 ${successCount.toLocaleString("ko-KR")}건${elapsedLabel}. OCR 결과를 확인하고 필요한 부분을 수정해주세요.`;
+};
+
+const requestOcrBatch = async (files, accessToken) => {
+  const formData = new FormData();
+  files.forEach((file) => formData.append("images", file));
+
+  const response = await fetch(`${getSeumBizAdminAssetBaseUrl()}/api/seumbiz/ocr-giftcard`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${accessToken}`,
+    },
+    body: formData,
+  });
+  const payload = await response.json().catch(() => ({}));
+  const hasPartialItems = Array.isArray(payload.items) && payload.items.length > 0;
+
+  if ((!response.ok || payload.ok === false) && !hasPartialItems) {
+    throw new Error(payload.message || `HTTP ${response.status}`);
+  }
+
+  return payload;
 };
 
 const notifyPurchaseRequestTelegram = async (row) => {
@@ -756,37 +831,52 @@ const handleRunOcr = async () => {
     return;
   }
 
-  const formData = new FormData();
-  files.forEach((file) => formData.append("images", file));
-
   setOcrRunning(true);
-  setOcrStatus("OCR을 실행하고 있습니다.", "");
+  const totalFiles = files.length;
+  const startedAt = Date.now();
+  let processedFiles = 0;
+  const mergedItems = [];
+  const mergedFailures = [];
+
+  setOcrStatus(totalFiles > 1 ? `${totalFiles}장 분석 중...` : "OCR 처리 중입니다.", "");
 
   try {
-    const response = await fetch(`${getSeumBizAdminAssetBaseUrl()}/api/seumbiz/ocr-giftcard`, {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${session.access_token}`,
-      },
-      body: formData,
-    });
-    const payload = await response.json().catch(() => ({}));
-    const hasPartialItems = Array.isArray(payload.items) && payload.items.length > 0;
-    if ((!response.ok || payload.ok === false) && !hasPartialItems) {
-      throw new Error(payload.message || `HTTP ${response.status}`);
+    for (let offset = 0; offset < totalFiles; offset += OCR_UPLOAD_BATCH_SIZE) {
+      const chunk = files.slice(offset, offset + OCR_UPLOAD_BATCH_SIZE);
+      setOcrStatus(`OCR 처리 중입니다.\n${processedFiles}/${totalFiles} 처리 완료`, "");
+
+      const payload = await requestOcrBatch(chunk, session.access_token);
+      processedFiles += Number(payload.processedCount || chunk.length);
+
+      if (payload.failures?.length) {
+        console.error("SEUMBiz OCR partial failures", payload.failures);
+        mergedFailures.push(...payload.failures);
+      }
+
+      mergedItems.push(...(payload.items || []));
+      setOcrStatus(`OCR 처리 중입니다.\n${Math.min(processedFiles, totalFiles)}/${totalFiles} 처리 완료`, "");
     }
 
-    if (payload.failures?.length) {
-      console.error("SEUMBiz OCR partial failures", payload.failures);
-    }
-
-    const newReviewItems = normalizeOcrResponseItems(payload.items || [], giftType);
+    const newReviewItems = normalizeOcrResponseItems(mergedItems, giftType);
     ocrReviewItems = [...ocrReviewItems, ...newReviewItems];
     renderOcrReviewItems();
-    setOcrStatus(getOcrResultMessage(payload, newReviewItems.length), payload.failureCount ? "error" : "ok");
-  } catch (error) {
-    console.error("SEUMBiz OCR failed", error);
-    setOcrStatus(`OCR 처리에 실패했습니다. ${error.message || "기존 등록 예정 목록은 유지됩니다."}`, "error");
+
+    const outcome = countOcrReviewOutcome(newReviewItems);
+    const summary = {
+      processedCount: totalFiles,
+      successCount: outcome.successCount,
+      failureCount: outcome.failureCount,
+      itemCount: newReviewItems.length,
+      elapsedMs: Date.now() - startedAt,
+    };
+    const hasReadyItems = newReviewItems.some((item) => isValidPin(item.pin_no));
+    setOcrStatus(
+      getOcrResultMessage(summary),
+      summary.failureCount && !hasReadyItems ? "error" : summary.failureCount ? "" : "ok",
+    );
+  } catch (batchError) {
+    console.error("SEUMBiz OCR failed", batchError);
+    setOcrStatus(`OCR 처리에 실패했습니다. ${batchError.message || "기존 등록 예정 목록은 유지됩니다."}`, "error");
   } finally {
     setOcrRunning(false);
   }
