@@ -22,8 +22,14 @@ const LEDGER_BADGE_CLASSES = {
   manual_debit: "ledger-type--debit",
 };
 
+const PAGE_SIZE = 20;
+
 const state = {
-  rows: [],
+  summaryRows: [],
+  pageRows: [],
+  totalCount: 0,
+  totalLedgerBalance: 0,
+  page: 1,
   period: "all",
 };
 
@@ -98,8 +104,28 @@ const getReasonMeta = (row) => {
   return "업체 잔액 원장";
 };
 
-const rowsWithRunningBalance = (rows) => {
-  let runningBalance = state.rows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+const getPeriodCutoffIso = () => {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 30);
+  return cutoff.toISOString();
+};
+
+const buildLedgerListQuery = (columns) => {
+  const authContext = window.SEUMBizAuth;
+  let query = supabase
+    .from("biz_balance_ledger")
+    .select(columns, { count: columns.includes("ledger_type") ? "exact" : undefined })
+    .eq("company_id", authContext.companyId);
+
+  if (state.period === "30d") {
+    query = query.gte("created_at", getPeriodCutoffIso());
+  }
+
+  return query.order("created_at", { ascending: false });
+};
+
+const rowsWithRunningBalance = (rows, startingBalance) => {
+  let runningBalance = startingBalance;
 
   return rows.map((row) => {
     const rowWithBalance = {
@@ -111,20 +137,72 @@ const rowsWithRunningBalance = (rows) => {
   });
 };
 
-const filterRows = () => {
-  if (state.period === "all") return state.rows;
+const getVisiblePages = (currentPage, totalPages, maxVisible = 5) => {
+  if (totalPages <= 1) return totalPages ? [1] : [];
+  if (totalPages <= maxVisible) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
 
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 30);
-  return state.rows.filter((row) => new Date(row.created_at) >= cutoff);
+  let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+  let end = start + maxVisible - 1;
+  if (end > totalPages) {
+    end = totalPages;
+    start = end - maxVisible + 1;
+  }
+
+  return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+};
+
+const renderPagination = () => {
+  if (!pagination) return;
+
+  const total = state.totalCount;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const page = Math.min(Math.max(state.page, 1), totalPages);
+  state.page = page;
+
+  const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const rangeEnd = total === 0 ? 0 : Math.min(page * PAGE_SIZE, total);
+  const rangeLabel =
+    total === 0
+      ? "전체 0건"
+      : `전체 ${formatNumber(total)}건 중 ${formatNumber(rangeStart)}-${formatNumber(rangeEnd)}건`;
+
+  const pages = getVisiblePages(page, totalPages);
+  const pageButtons = pages
+    .map((pageNumber) =>
+      pageNumber === page
+        ? `<strong aria-current="page">${pageNumber}</strong>`
+        : `<button type="button" data-page="${pageNumber}">${pageNumber}</button>`,
+    )
+    .join("");
+
+  const prevControl =
+    page > 1
+      ? `<button type="button" data-page-action="prev">이전</button>`
+      : `<span class="is-disabled" aria-disabled="true">이전</span>`;
+  const nextControl =
+    page < totalPages
+      ? `<button type="button" data-page-action="next">다음</button>`
+      : `<span class="is-disabled" aria-disabled="true">다음</span>`;
+
+  pagination.innerHTML = `<span>${escapeHtml(rangeLabel)}</span>${prevControl}${pageButtons}${nextControl}`;
+};
+
+const goToPage = (nextPage) => {
+  const totalPages = Math.max(1, Math.ceil(state.totalCount / PAGE_SIZE));
+  const page = Math.min(Math.max(nextPage, 1), totalPages);
+  if (page === state.page) return;
+  state.page = page;
+  fetchLedgerPage();
 };
 
 const renderSummary = () => {
-  const totalBalance = state.rows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
-  const totalIncome = state.rows
+  const totalBalance = state.summaryRows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+  const totalIncome = state.summaryRows
     .filter((row) => Number(row.amount || 0) > 0)
     .reduce((sum, row) => sum + Number(row.amount || 0), 0);
-  const totalOutcome = state.rows
+  const totalOutcome = state.summaryRows
     .filter((row) => Number(row.amount || 0) < 0)
     .reduce((sum, row) => sum + Math.abs(Number(row.amount || 0)), 0);
 
@@ -142,7 +220,7 @@ const renderSummary = () => {
       meta: "출금 완료 및 차감 로그",
     },
     {
-      number: `${formatNumber(state.rows.length)}건`,
+      number: `${formatNumber(state.summaryRows.length)}건`,
       meta: "전체 원장 기준",
     },
   ];
@@ -158,11 +236,11 @@ const renderSummary = () => {
 const renderRows = () => {
   if (!tableBody) return;
 
-  const rows = rowsWithRunningBalance(filterRows());
+  const rows = state.pageRows;
 
   if (rows.length === 0) {
     setTableMessage("표시할 업체 잔액 내역이 없습니다.");
-    if (pagination) pagination.innerHTML = "<span>전체 0건</span><strong>1</strong>";
+    renderPagination();
     return;
   }
 
@@ -194,9 +272,7 @@ const renderRows = () => {
     })
     .join("");
 
-  if (pagination) {
-    pagination.innerHTML = `<span>전체 ${formatNumber(rows.length)}건</span><strong>1</strong>`;
-  }
+  renderPagination();
 };
 
 const render = () => {
@@ -204,7 +280,27 @@ const render = () => {
   renderRows();
 };
 
-const loadLedger = async () => {
+const loadLedgerSummary = async () => {
+  const authContext = window.SEUMBizAuth;
+  if (!supabase || !authContext?.companyId) return;
+
+  const { data, error } = await supabase
+    .from("biz_balance_ledger")
+    .select("amount, ledger_type, created_at")
+    .eq("company_id", authContext.companyId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("SEUMBiz ledger summary load failed", error);
+    return;
+  }
+
+  state.summaryRows = data || [];
+  state.totalLedgerBalance = state.summaryRows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+  renderSummary();
+};
+
+const fetchLedgerPage = async () => {
   const requestId = ++ledgerRequestId;
 
   if (!supabase) {
@@ -220,28 +316,82 @@ const loadLedger = async () => {
 
   setTableMessage("업체 잔액 내역을 불러오는 중입니다.", "loading");
 
-  const { data, error } = await supabase
-    .from("biz_balance_ledger")
-    .select("id, company_id, purchase_request_id, withdraw_request_id, amount, ledger_type, reason, memo, created_by, created_at")
-    .eq("company_id", authContext.companyId)
-    .order("created_at", { ascending: false });
+  const from = (state.page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+  const listColumns =
+    "id, company_id, purchase_request_id, withdraw_request_id, amount, ledger_type, reason, memo, created_by, created_at";
+
+  const { data, error, count } = await buildLedgerListQuery(listColumns).range(from, to);
 
   if (requestId !== ledgerRequestId) return;
 
   if (error) {
     setTableMessage(error.message || "업체 잔액 내역을 불러오지 못했습니다.", "error");
+    state.pageRows = [];
+    state.totalCount = 0;
+    renderPagination();
     return;
   }
 
-  state.rows = data || [];
-  render();
+  state.totalCount = count ?? 0;
+
+  let startingBalance = state.totalLedgerBalance;
+  if (from > 0) {
+    const { data: precedingRows, error: precedingError } = await buildLedgerListQuery("amount").range(0, from - 1);
+    if (requestId !== ledgerRequestId) return;
+
+    if (precedingError) {
+      setTableMessage(precedingError.message || "업체 잔액 내역을 불러오지 못했습니다.", "error");
+      state.pageRows = [];
+      renderPagination();
+      return;
+    }
+
+    const precedingSum = (precedingRows || []).reduce((sum, row) => sum + Number(row.amount || 0), 0);
+    startingBalance = state.totalLedgerBalance - precedingSum;
+  }
+
+  state.pageRows = rowsWithRunningBalance(data || [], startingBalance);
+  renderRows();
+};
+
+const loadLedger = async () => {
+  state.pageRows = [];
+  state.totalCount = 0;
+  state.page = 1;
+  await Promise.all([loadLedgerSummary(), fetchLedgerPage()]);
+};
+
+const resetListFilters = () => {
+  state.page = 1;
+  fetchLedgerPage();
 };
 
 periodButton?.addEventListener("click", () => {
   state.period = state.period === "all" ? "30d" : "all";
   periodButton.classList.toggle("is-active", state.period === "30d");
   periodButton.lastChild.textContent = state.period === "30d" ? "최근 30일" : "전체 기간";
-  renderRows();
+  resetListFilters();
+});
+
+pagination?.addEventListener("click", (event) => {
+  const target = event.target instanceof Element ? event.target : null;
+  const pageButton = target?.closest("[data-page]");
+  const actionButton = target?.closest("[data-page-action]");
+
+  if (pageButton) {
+    goToPage(Number(pageButton.dataset.page));
+    return;
+  }
+
+  if (actionButton?.dataset.pageAction === "prev") {
+    goToPage(state.page - 1);
+    return;
+  }
+
+  if (actionButton?.dataset.pageAction === "next") {
+    goToPage(state.page + 1);
+  }
 });
 
 const initLedger = () => {

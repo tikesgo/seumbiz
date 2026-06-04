@@ -27,8 +27,13 @@ const STATUS_FILTERS = {
   취소: "canceled",
 };
 
+const PAGE_SIZE = 20;
+
 const state = {
-  rows: [],
+  summaryRows: [],
+  pageRows: [],
+  totalCount: 0,
+  page: 1,
   status: "all",
   query: "",
   period: "all",
@@ -207,41 +212,136 @@ const normalizeRows = (rows) =>
     };
   });
 
-const filterRows = () => {
-  const query = state.query.trim().toLowerCase();
+const getPeriodCutoffIso = () => {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 30);
+  return cutoff.toISOString();
+};
 
-  return state.rows.filter((row) => {
-    const matchesStatus = state.status === "all" || row.status === state.status;
-    const matchesQuery =
-      !query ||
-      row.receipt_no?.toLowerCase().includes(query) ||
-      row.giftcard_type?.toLowerCase().includes(query) ||
-      row.giftcard_name_snapshot?.toLowerCase().includes(query) ||
-      row.giftcard_code?.toLowerCase().includes(query);
-    const createdAt = new Date(row.created_at);
-    const matchesPeriod = state.period === "all" || createdAt >= cutoff;
+const buildPurchaseListQuery = () => {
+  const authContext = window.SEUMBizAuth;
+  let query = supabase
+    .from("biz_purchase_requests")
+    .select(
+      `
+        id,
+        company_id,
+        receipt_no,
+        giftcard_type,
+        giftcard_code,
+        giftcard_name_snapshot,
+        giftcard_logo_url_snapshot,
+        giftcard_rate_snapshot,
+        item_count,
+        total_face_value,
+        applied_rate,
+        expected_settlement_amount,
+        approved_settlement_amount,
+        status,
+        created_at,
+        biz_purchase_items (
+          id,
+          face_value
+        )
+      `,
+      { count: "exact" },
+    )
+    .eq("company_id", authContext.companyId);
 
-    return matchesStatus && matchesQuery && matchesPeriod;
-  });
+  if (state.status !== "all") {
+    query = query.eq("status", state.status);
+  }
+
+  if (state.period === "30d") {
+    query = query.gte("created_at", getPeriodCutoffIso());
+  }
+
+  const search = state.query.trim();
+  if (search) {
+    const pattern = `%${search.replace(/[,*]/g, "")}%`;
+    query = query.or(
+      `receipt_no.ilike.${pattern},giftcard_type.ilike.${pattern},giftcard_name_snapshot.ilike.${pattern},giftcard_code.ilike.${pattern}`,
+    );
+  }
+
+  return query.order("created_at", { ascending: false });
+};
+
+const getVisiblePages = (currentPage, totalPages, maxVisible = 5) => {
+  if (totalPages <= 1) return totalPages ? [1] : [];
+  if (totalPages <= maxVisible) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+  let end = start + maxVisible - 1;
+  if (end > totalPages) {
+    end = totalPages;
+    start = end - maxVisible + 1;
+  }
+
+  return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+};
+
+const renderPagination = () => {
+  if (!pagination) return;
+
+  const total = state.totalCount;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const page = Math.min(Math.max(state.page, 1), totalPages);
+  state.page = page;
+
+  const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const rangeEnd = total === 0 ? 0 : Math.min(page * PAGE_SIZE, total);
+  const rangeLabel =
+    total === 0
+      ? "전체 0건"
+      : `전체 ${formatNumber(total)}건 중 ${formatNumber(rangeStart)}-${formatNumber(rangeEnd)}건`;
+
+  const pages = getVisiblePages(page, totalPages);
+  const pageButtons = pages
+    .map((pageNumber) =>
+      pageNumber === page
+        ? `<strong aria-current="page">${pageNumber}</strong>`
+        : `<button type="button" data-page="${pageNumber}">${pageNumber}</button>`,
+    )
+    .join("");
+
+  const prevControl =
+    page > 1
+      ? `<button type="button" data-page-action="prev">이전</button>`
+      : `<span class="is-disabled" aria-disabled="true">이전</span>`;
+  const nextControl =
+    page < totalPages
+      ? `<button type="button" data-page-action="next">다음</button>`
+      : `<span class="is-disabled" aria-disabled="true">다음</span>`;
+
+  pagination.innerHTML = `<span>${escapeHtml(rangeLabel)}</span>${prevControl}${pageButtons}${nextControl}`;
+};
+
+const goToPage = (nextPage) => {
+  const totalPages = Math.max(1, Math.ceil(state.totalCount / PAGE_SIZE));
+  const page = Math.min(Math.max(nextPage, 1), totalPages);
+  if (page === state.page) return;
+  state.page = page;
+  fetchPurchasePage();
 };
 
 const renderSummary = () => {
   const now = new Date();
-  const thisMonthRows = state.rows.filter((row) => {
+  const thisMonthRows = state.summaryRows.filter((row) => {
     const date = new Date(row.created_at);
     return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
   });
-  const pendingRows = state.rows.filter((row) => row.status === "pending" || row.status === "reviewing");
-  const approvedRecentRows = state.rows.filter((row) => {
+  const pendingRows = state.summaryRows.filter((row) => row.status === "pending" || row.status === "reviewing");
+  const approvedRecentRows = state.summaryRows.filter((row) => {
     const date = new Date(row.created_at);
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 7);
     return row.status === "approved" && date >= cutoff;
   });
   const totalItems = thisMonthRows.reduce((sum, row) => sum + row.item_count, 0);
-  const expectedAmount = state.rows.reduce((sum, row) => sum + row.settlement_amount, 0);
+  const expectedAmount = state.summaryRows.reduce((sum, row) => sum + row.settlement_amount, 0);
 
   const values = [
     {
@@ -273,11 +373,11 @@ const renderSummary = () => {
 const renderRows = () => {
   if (!tableBody) return;
 
-  const rows = filterRows();
+  const rows = state.pageRows;
 
   if (rows.length === 0) {
     setTableMessage("표시할 매입 내역이 없습니다.");
-    if (pagination) pagination.innerHTML = "<span>전체 0건</span><strong>1</strong>";
+    renderPagination();
     return;
   }
 
@@ -302,9 +402,7 @@ const renderRows = () => {
     })
     .join("");
 
-  if (pagination) {
-    pagination.innerHTML = `<span>전체 ${formatNumber(rows.length)}건</span><strong>1</strong>`;
-  }
+  renderPagination();
 };
 
 const setDetailState = (message, stateName = "") => {
@@ -476,10 +574,29 @@ const render = () => {
   renderRows();
 };
 
-const loadPurchaseHistory = async () => {
+const loadPurchaseSummary = async () => {
+  const authContext = window.SEUMBizAuth;
+  if (!supabase || !authContext?.companyId) return;
+
+  const { data, error } = await supabase
+    .from("biz_purchase_requests")
+    .select(
+      "id, status, created_at, item_count, expected_settlement_amount, approved_settlement_amount, submitted_settlement_amount",
+    )
+    .eq("company_id", authContext.companyId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("SEUMBiz history summary load failed", error);
+    return;
+  }
+
+  state.summaryRows = normalizeRows(data || []);
+  renderSummary();
+};
+
+const fetchPurchasePage = async () => {
   const requestId = ++historyRequestId;
-  state.rows = [];
-  resetSummary();
 
   if (!supabase) {
     setTableMessage("Supabase 연결 설정을 확인해주세요.", "error");
@@ -494,44 +611,37 @@ const loadPurchaseHistory = async () => {
 
   setTableMessage("매입 내역을 불러오는 중입니다.", "loading");
 
-  const { data, error } = await supabase
-    .from("biz_purchase_requests")
-    .select(
-      `
-        id,
-        company_id,
-        receipt_no,
-        giftcard_type,
-        giftcard_code,
-        giftcard_name_snapshot,
-        giftcard_logo_url_snapshot,
-        giftcard_rate_snapshot,
-        item_count,
-        total_face_value,
-        applied_rate,
-        expected_settlement_amount,
-        approved_settlement_amount,
-        status,
-        created_at,
-        biz_purchase_items (
-          id,
-          face_value
-        )
-      `,
-    )
-    .eq("company_id", authContext.companyId)
-    .order("created_at", { ascending: false });
+  const from = (state.page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+  const { data, error, count } = await buildPurchaseListQuery().range(from, to);
 
   if (requestId !== historyRequestId) return;
 
   if (error) {
     setTableMessage(error.message || "매입 내역을 불러오지 못했습니다.", "error");
+    state.pageRows = [];
+    state.totalCount = 0;
+    renderPagination();
     return;
   }
 
+  state.totalCount = count ?? 0;
   const giftcardMap = await loadCurrentGiftcardMap(data || []);
-  state.rows = normalizeRows(applyGiftcardFallbacks(data || [], giftcardMap));
-  render();
+  state.pageRows = normalizeRows(applyGiftcardFallbacks(data || [], giftcardMap));
+  renderRows();
+};
+
+const loadPurchaseHistory = async () => {
+  state.pageRows = [];
+  state.totalCount = 0;
+  state.page = 1;
+  resetSummary();
+  await Promise.all([loadPurchaseSummary(), fetchPurchasePage()]);
+};
+
+const resetListFilters = () => {
+  state.page = 1;
+  fetchPurchasePage();
 };
 
 filterChips.forEach((chip) => {
@@ -540,13 +650,33 @@ filterChips.forEach((chip) => {
   chip.addEventListener("click", () => {
     state.status = status;
     filterChips.forEach((item) => item.classList.toggle("is-active", item === chip));
-    renderRows();
+    resetListFilters();
   });
 });
 
 searchInput?.addEventListener("input", (event) => {
   state.query = event.target.value;
-  renderRows();
+  resetListFilters();
+});
+
+pagination?.addEventListener("click", (event) => {
+  const target = event.target instanceof Element ? event.target : null;
+  const pageButton = target?.closest("[data-page]");
+  const actionButton = target?.closest("[data-page-action]");
+
+  if (pageButton) {
+    goToPage(Number(pageButton.dataset.page));
+    return;
+  }
+
+  if (actionButton?.dataset.pageAction === "prev") {
+    goToPage(state.page - 1);
+    return;
+  }
+
+  if (actionButton?.dataset.pageAction === "next") {
+    goToPage(state.page + 1);
+  }
 });
 
 tableBody?.addEventListener("click", (event) => {
@@ -576,7 +706,7 @@ periodButton?.addEventListener("click", () => {
   state.period = state.period === "all" ? "30d" : "all";
   periodButton.classList.toggle("is-active", state.period === "30d");
   periodButton.lastChild.textContent = state.period === "30d" ? "최근 30일" : "전체 기간";
-  renderRows();
+  resetListFilters();
 });
 
 const initPurchaseHistory = () => {

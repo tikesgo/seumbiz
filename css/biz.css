@@ -3148,6 +3148,43 @@
   background: #2f6bff;
 }
 
+.history-pagination button,
+.ledger-pagination button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  color: #344054;
+  background: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.history-pagination button:hover:not(:disabled),
+.ledger-pagination button:hover:not(:disabled) {
+  border-color: #98a2b3;
+  background: #f9fafb;
+}
+
+.history-pagination button.is-active,
+.ledger-pagination button.is-active {
+  color: #fff;
+  border-color: #2f6bff;
+  background: #2f6bff;
+}
+
+.history-pagination button:disabled,
+.ledger-pagination button:disabled,
+.history-pagination .is-disabled,
+.ledger-pagination .is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 
 .history-detail-preview {
   display: grid;
