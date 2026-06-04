@@ -3,88 +3,87 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>세움비즈 | 포인트 내역</title>
-    <meta name="description" content="세움비즈 업체 전용 포인트 내역 화면" />
+    <title>SEUMBiz | 업체 잔액 내역</title>
+    <meta name="description" content="SEUMBiz 업체 잔액 거래 원장 화면" />
     <link rel="stylesheet" href="/css/common.css" />
     <link rel="stylesheet" href="/css/biz.css" />
   </head>
-  <body class="biz-body">
-    <header class="site-header biz-header">
-      <a class="site-brand" href="/biz-dashboard.html" aria-label="세움비즈 업체 대시보드 홈">
-        <img src="/assets/site-logo.png" alt="세움비즈 로고" />
-      </a>
-      <button class="mobile-menu-button" type="button" aria-controls="siteNav" aria-expanded="false" aria-label="메뉴 열기">☰</button>
-      <nav class="site-nav" id="siteNav" aria-label="업체 전용 메뉴">
-        <a href="/biz-dashboard.html">대시보드</a>
-        <a href="/biz-register.html">상품권등록</a>
-        <a href="/biz-points.html" aria-current="page">포인트내역</a>
-        <a href="/biz-withdraw.html">정산신청</a>
-        <a href="/biz-history.html">이용내역</a>
-        <a href="/support.html">고객센터</a>
-      </nav>
-    </header>
+  <body class="biz-portal-body">
+    <div class="biz-shell">
+      <aside class="biz-sidebar">
+        <a class="biz-sidebar-brand" href="biz-dashboard.html" aria-label="SEUMBiz 대시보드로 이동">
+          <strong><span>SEUM</span><span class="brand-accent">Biz</span></strong>
+          <span class="biz-brand-subtitle">업체 운영 플랫폼</span>
+        </a>
+        <nav class="biz-side-nav" aria-label="업체 포털 메뉴">
+          <a href="/biz-register.html"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 5h14v14H5z" /><path d="M8 9h8M8 13h5" /></svg></span>매입 신청</a>
+          <a href="/biz-history.html"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 4h10M6 8h12v11H6z" /><path d="M9 12h6M9 16h4" /></svg></span>매입 내역</a>
+          <a href="/biz-points.html" aria-current="page"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 18h16" /><path d="M7 15v-4M12 15V7M17 15v-6" /></svg></span>업체 잔액 내역</a>
+          <a href="/biz-withdraw.html"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9" /><path d="M12 7v6l4 2" /></svg></span>업체 잔액 출금</a>
+          <a href="/biz-profile.html"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" /><path d="M4 21a8 8 0 0 1 16 0" /></svg></span>내 정보 관리</a>
+        </nav>
+        <div class="biz-sidebar-support">
+          <strong>🎧 고객센터</strong>
+          <span>365일 24시간 상담 운영</span>
+          <span>010-8310-5150</span>
+        </div>
+        <button class="biz-sidebar-logout biz-logout-button" type="button" data-biz-logout>로그아웃</button>
+      </aside>
 
-    <main class="biz-page">
-      <section class="biz-hero" aria-labelledby="bizPointsTitle">
-        <p class="biz-eyebrow">Point Ledger</p>
-        <h1 id="bizPointsTitle">포인트 내역</h1>
-        <p>상품권 승인과 정산 신청에 따른 포인트 흐름을 확인하는 화면입니다.</p>
-      </section>
+      <main class="biz-main">
+        <header class="biz-topbar">
+          <div class="biz-title-block">
+            <p class="biz-kicker">BALANCE LEDGER</p>
+            <h1>업체 잔액 내역</h1>
+            <p>승인 반영, 출금 완료, 관리자 차감, 선지급, 복구 내역을 거래 원장으로 확인합니다.</p>
+          </div>
+          <div class="biz-account is-loading" data-biz-account>
+            <div class="biz-user-chip" data-biz-user-chip><span class="biz-user-icon" aria-hidden="true" data-biz-user-initial></span><span data-biz-account-user-name></span><span data-biz-user-suffix></span></div>
+            <span class="biz-balance-chip" data-biz-balance-chip><span data-biz-balance-label></span><span data-biz-account-balance></span></span>
+          </div>
+        </header>
 
-      <div class="biz-layout">
-        <section class="biz-balance-card" aria-label="보유 포인트">
-          <span>보유 포인트</span>
-          <strong>3,820,000P</strong>
-          <small>정산 신청 가능 포인트 목업</small>
+        <section class="ledger-summary" aria-label="업체 잔액 요약">
+          <article class="ledger-summary-card ledger-summary-card--primary"><span class="ledger-summary-icon ledger-summary-icon--balance" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 7h14v11H5z" /><path d="M8 7V5h8v2" /><path d="M8 13h4" /></svg></span><div><span>현재 잔액</span><strong data-ledger-summary="balance">-</strong><small>원장 로그 합계 기준</small></div></article>
+          <article class="ledger-summary-card"><span class="ledger-summary-icon ledger-summary-icon--income" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 19V5" /><path d="m7 10 5-5 5 5" /><path d="M5 19h14" /></svg></span><div><span>총 입금</span><strong>-</strong><small>승인 반영 포함</small></div></article>
+          <article class="ledger-summary-card"><span class="ledger-summary-icon ledger-summary-icon--outcome" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14" /><path d="m7 14 5 5 5-5" /><path d="M5 5h14" /></svg></span><div><span>총 출금</span><strong>-</strong><small>차감 로그 포함</small></div></article>
+          <article class="ledger-summary-card"><span class="ledger-summary-icon ledger-summary-icon--count" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 7h10M7 12h10M7 17h7" /><path d="M4 4h16v16H4z" /></svg></span><div><span>총 건수</span><strong>-</strong><small>전체 원장 기준</small></div></article>
         </section>
 
-        <section class="panel biz-section" aria-labelledby="pointLogTitle">
-          <div class="biz-section-head">
+        <section class="ledger-panel" aria-labelledby="balanceLogTitle">
+          <div class="ledger-panel-head">
             <div>
-              <h2 id="pointLogTitle">포인트 로그</h2>
-              <p>적립, 차감, 취소 상태를 구분한 목업 테이블입니다.</p>
+              <h2 id="balanceLogTitle">거래 원장</h2>
+              <p>매입 승인 반영은 +금액, 출금 완료와 관리자 선지급은 -금액으로 기록합니다.</p>
             </div>
           </div>
-          <div class="biz-table-wrap">
-            <table class="biz-table">
-              <caption>포인트 로그 내역</caption>
-              <thead>
-                <tr>
-                  <th scope="col">일자</th>
-                  <th scope="col">구분</th>
-                  <th scope="col">내용</th>
-                  <th scope="col">포인트</th>
-                  <th scope="col">상태</th>
-                </tr>
-              </thead>
+          <div class="ledger-toolbar" aria-label="거래 원장 필터">
+            <div class="ledger-toolbar-actions">
+              <button class="ledger-outline-button" type="button"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3v4M17 3v4" /><path d="M4 7h16v13H4z" /><path d="M8 12h4" /></svg></span>기간 필터</button>
+              <button class="ledger-outline-button" type="button"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></svg></span>엑셀 다운로드</button>
+            </div>
+          </div>
+          <div class="ledger-table-wrap">
+            <table class="ledger-table">
+              <caption>업체 잔액 거래 원장</caption>
+              <thead><tr><th scope="col">사유</th><th scope="col">금액</th><th scope="col">처리후 잔액</th><th scope="col">처리시간</th><th scope="col">메모</th></tr></thead>
               <tbody>
-                <tr>
-                  <td>2026.05.26</td>
-                  <td>적립</td>
-                  <td>신세계상품권 승인</td>
-                  <td>+1,000,000P</td>
-                  <td><span class="biz-badge biz-badge--earned">적립</span></td>
-                </tr>
-                <tr>
-                  <td>2026.05.25</td>
-                  <td>차감</td>
-                  <td>정산 신청</td>
-                  <td>-500,000P</td>
-                  <td><span class="biz-badge biz-badge--deducted">차감</span></td>
-                </tr>
-                <tr>
-                  <td>2026.05.24</td>
-                  <td>취소</td>
-                  <td>반려 건 포인트 취소</td>
-                  <td>-100,000P</td>
-                  <td><span class="biz-badge biz-badge--canceled">취소</span></td>
-                </tr>
+                <tr><td colspan="5" class="ledger-empty-state">업체 잔액 내역을 불러오는 중입니다.</td></tr>
               </tbody>
             </table>
           </div>
+          <div class="ledger-pagination" aria-label="거래 원장 페이지">
+            <span>전체 0건</span>
+            <strong>1</strong>
+            <span>2</span>
+            <span>3</span>
+            <span>4</span>
+            <span>5</span>
+          </div>
         </section>
-      </div>
-    </main>
-
+      </main>
+    </div>
+    <script type="module" src="/js/biz-auth.js"></script>
+    <script type="module" src="/js/biz-points.js"></script>
   </body>
 </html>

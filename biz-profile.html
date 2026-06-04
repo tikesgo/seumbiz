@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SEUMBiz | 내 정보 관리</title>
+    <meta name="description" content="SEUMBiz 업체 담당자 정보 관리 화면" />
+    <link rel="stylesheet" href="/css/common.css" />
+    <link rel="stylesheet" href="/css/biz.css" />
+  </head>
+  <body class="biz-portal-body">
+    <div class="biz-shell">
+      <aside class="biz-sidebar">
+        <a class="biz-sidebar-brand" href="biz-dashboard.html" aria-label="SEUMBiz 대시보드로 이동">
+          <strong><span>SEUM</span><span class="brand-accent">Biz</span></strong>
+          <span class="biz-brand-subtitle">업체 운영 플랫폼</span>
+        </a>
+        <nav class="biz-side-nav" aria-label="업체 포털 메뉴">
+          <a href="/biz-register.html"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 5h14v14H5z" /><path d="M8 9h8M8 13h5" /></svg></span>매입 신청</a>
+          <a href="/biz-history.html"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 4h10M6 8h12v11H6z" /><path d="M9 12h6M9 16h4" /></svg></span>매입 내역</a>
+          <a href="/biz-points.html"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 18h16" /><path d="M7 15v-4M12 15V7M17 15v-6" /></svg></span>업체 잔액 내역</a>
+          <a href="/biz-withdraw.html"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9" /><path d="M12 7v6l4 2" /></svg></span>업체 잔액 출금</a>
+          <a href="/biz-profile.html" aria-current="page"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" /><path d="M4 21a8 8 0 0 1 16 0" /></svg></span>내 정보 관리</a>
+        </nav>
+        <div class="biz-sidebar-support">
+          <strong>🎧 고객센터</strong>
+          <span>365일 24시간 상담 운영</span>
+          <span>010-8310-5150</span>
+        </div>
+        <button class="biz-sidebar-logout biz-logout-button" type="button" data-biz-logout>로그아웃</button>
+      </aside>
+
+      <main class="biz-main">
+        <header class="biz-topbar">
+          <div class="biz-title-block">
+            <p class="biz-kicker">COMPANY PROFILE</p>
+            <h1>내 정보 관리</h1>
+            <p>업체명, 담당자, 연락처 등 기본 정보를 확인합니다.</p>
+          </div>
+          <div class="biz-account is-loading" data-biz-account>
+            <div class="biz-user-chip" data-biz-user-chip><span class="biz-user-icon" aria-hidden="true" data-biz-user-initial></span><span data-biz-account-user-name></span><span data-biz-user-suffix></span></div>
+            <span class="biz-balance-chip" data-biz-balance-chip><span data-biz-balance-label></span><span data-biz-account-balance></span></span>
+          </div>
+        </header>
+
+        <form class="profile-settings" id="bizProfileForm">
+          <section class="profile-card" aria-labelledby="profileInfoTitle">
+            <div class="profile-card-head">
+              <div>
+                <h2 id="profileInfoTitle">계정 정보</h2>
+                <p>기본 정보는 운영에 필요한 용도로만 사용됩니다.</p>
+              </div>
+            </div>
+            <div class="profile-form-grid">
+              <label class="profile-field" for="profileCompanyName">업체명 <input id="profileCompanyName" name="profileCompanyName" type="text" readonly aria-readonly="true" /></label>
+              <label class="profile-field" for="profileManagerName">담당자명 <input id="profileManagerName" name="profileManagerName" type="text" /></label>
+              <label class="profile-field" for="profilePhone">연락처 <input id="profilePhone" name="profilePhone" type="tel" /></label>
+              <label class="profile-field" for="profileKakaoId">카카오톡 ID <input id="profileKakaoId" name="profileKakaoId" type="text" /></label>
+            </div>
+          </section>
+
+          <section class="profile-card" aria-labelledby="profilePasswordTitle">
+            <div class="profile-card-head profile-card-head--icon">
+              <div>
+                <h2 id="profilePasswordTitle">비밀번호 변경</h2>
+                <p>새 비밀번호는 8자 이상 입력해주세요.</p>
+              </div>
+              <span class="profile-lock-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 10V8a5 5 0 0 1 10 0v2" /><path d="M6 10h12v10H6z" /><path d="M12 14v3" /></svg></span>
+            </div>
+            <div class="profile-form-grid">
+              <label class="profile-field profile-field-wide" for="currentPassword">현재 비밀번호 <input id="currentPassword" name="currentPassword" type="password" placeholder="현재 비밀번호를 입력해주세요" /></label>
+              <label class="profile-field profile-field-wide" for="newPassword">새 비밀번호 <input id="newPassword" name="newPassword" type="password" placeholder="새 비밀번호를 입력해주세요" /></label>
+              <label class="profile-field profile-field-wide" for="confirmPassword">새 비밀번호 확인 <input id="confirmPassword" name="confirmPassword" type="password" placeholder="새 비밀번호를 다시 입력해주세요" /></label>
+            </div>
+          </section>
+
+          <button class="profile-save-button" id="profileSaveButton" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l2 2v14H5z" /><path d="M8 4v6h8V4" /><path d="M8 17h8" /></svg>
+            변경사항 저장
+          </button>
+          <p class="profile-status-message" id="profileStatusMessage" role="status" aria-live="polite"></p>
+          <p class="profile-save-note">저장 버튼을 클릭해야 변경사항이 적용됩니다.</p>
+        </form>
+      </main>
+    </div>
+    <script type="module" src="/js/biz-auth.js"></script>
+    <script type="module" src="/js/biz-profile.js"></script>
+  </body>
+</html>

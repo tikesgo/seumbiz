@@ -3,74 +3,152 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>세움비즈 | 상품권 등록</title>
-    <meta name="description" content="세움비즈 업체 전용 상품권 등록 화면" />
+    <title>SEUMBiz | 매입 신청</title>
+    <meta name="description" content="SEUMBiz 업체 전용 상품권 매입 신청 화면" />
     <link rel="stylesheet" href="/css/common.css" />
     <link rel="stylesheet" href="/css/biz.css" />
   </head>
-  <body class="biz-body">
-    <header class="site-header biz-header">
-      <a class="site-brand" href="/biz-dashboard.html" aria-label="세움비즈 업체 대시보드 홈">
-        <img src="/assets/site-logo.png" alt="세움비즈 로고" />
-      </a>
-      <button class="mobile-menu-button" type="button" aria-controls="siteNav" aria-expanded="false" aria-label="메뉴 열기">☰</button>
-      <nav class="site-nav" id="siteNav" aria-label="업체 전용 메뉴">
-        <a href="/biz-dashboard.html">대시보드</a>
-        <a href="/biz-register.html" aria-current="page">상품권등록</a>
-        <a href="/biz-points.html">포인트내역</a>
-        <a href="/biz-withdraw.html">정산신청</a>
-        <a href="/biz-history.html">이용내역</a>
-        <a href="/support.html">고객센터</a>
-      </nav>
-    </header>
-
-    <main class="biz-page">
-      <section class="biz-hero" aria-labelledby="bizRegisterTitle">
-        <p class="biz-eyebrow">Gift Card Register</p>
-        <h1 id="bizRegisterTitle">상품권 등록</h1>
-        <p>업체 보유 상품권 정보를 등록하는 화면입니다. 현재는 화면 목업이며 저장 로직은 연결되어 있지 않습니다.</p>
-      </section>
-
-      <section class="panel biz-section" aria-labelledby="giftCardRegisterFormTitle">
-        <div class="biz-section-head">
-          <div>
-            <h2 id="giftCardRegisterFormTitle">등록 정보</h2>
-            <p>등록 후 관리자 검수 완료 시 포인트가 적립됩니다.</p>
-          </div>
+  <body class="biz-portal-body">
+    <div class="biz-shell">
+      <aside class="biz-sidebar">
+        <a class="biz-sidebar-brand" href="biz-dashboard.html" aria-label="SEUMBiz 대시보드로 이동">
+          <strong><span>SEUM</span><span class="brand-accent">Biz</span></strong>
+          <span class="biz-brand-subtitle">업체 운영 플랫폼</span>
+        </a>
+        <nav class="biz-side-nav" aria-label="업체 포털 메뉴">
+          <a href="/biz-register.html" aria-current="page"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 5h14v14H5z" /><path d="M8 9h8M8 13h5" /></svg></span>매입 신청</a>
+          <a href="/biz-history.html"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 4h10M6 8h12v11H6z" /><path d="M9 12h6M9 16h4" /></svg></span>매입 내역</a>
+          <a href="/biz-points.html"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 18h16" /><path d="M7 15v-4M12 15V7M17 15v-6" /></svg></span>업체 잔액 내역</a>
+          <a href="/biz-withdraw.html"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9" /><path d="M12 7v6l4 2" /></svg></span>업체 잔액 출금</a>
+          <a href="/biz-profile.html"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" /><path d="M4 21a8 8 0 0 1 16 0" /></svg></span>내 정보 관리</a>
+        </nav>
+        <div class="biz-sidebar-support">
+          <strong>🎧 고객센터</strong>
+          <span>365일 24시간 상담 운영</span>
+          <span>010-8310-5150</span>
         </div>
-        <form class="biz-form" id="bizGiftCardRegisterForm">
-          <div class="biz-form-grid">
-            <label for="giftCardType">
-              상품권 종류
-              <select id="giftCardType" name="giftCardType">
-                <option value="">선택해주세요</option>
-                <option value="shinsegae">신세계상품권</option>
-                <option value="lotte-mobile">롯데모바일상품권</option>
-                <option value="culture">문화상품권</option>
-              </select>
-            </label>
-            <label for="giftCardSerialNumber">
-              일련번호
-              <input id="giftCardSerialNumber" name="giftCardSerialNumber" type="text" placeholder="일련번호를 입력하세요" autocomplete="off" />
-            </label>
-            <label for="giftCardFaceValue">
-              액면가
-              <input id="giftCardFaceValue" name="giftCardFaceValue" type="number" inputmode="numeric" placeholder="예: 100000" />
-            </label>
-            <label for="giftCardQuantity">
-              수량
-              <input id="giftCardQuantity" name="giftCardQuantity" type="number" inputmode="numeric" min="1" placeholder="예: 1" />
-            </label>
-            <label class="biz-field-wide" for="giftCardMemo">
-              메모
-              <textarea id="giftCardMemo" name="giftCardMemo" placeholder="관리자에게 전달할 내용을 입력하세요"></textarea>
-            </label>
-          </div>
-          <p class="biz-note">등록 후 관리자 검수 완료 시 포인트가 적립됩니다.</p>
-          <button class="biz-action-button" type="button">등록하기</button>
-        </form>
-      </section>
-    </main>
+        <button class="biz-sidebar-logout biz-logout-button" type="button" data-biz-logout>로그아웃</button>
+      </aside>
 
+      <main class="biz-main">
+        <header class="biz-topbar">
+          <div class="biz-title-block">
+            <p class="biz-kicker">PURCHASE REQUEST</p>
+            <h1>매입 신청</h1>
+            <p>상품권 종류를 선택하고 핀번호 또는 이미지를 등록합니다.</p>
+          </div>
+          <div class="biz-account is-loading" data-biz-account>
+            <div class="biz-user-chip" data-biz-user-chip><span class="biz-user-icon" aria-hidden="true" data-biz-user-initial></span><span data-biz-account-user-name></span><span data-biz-user-suffix></span></div>
+            <span class="biz-balance-chip" data-biz-balance-chip><span data-biz-balance-label></span><span data-biz-account-balance></span></span>
+          </div>
+        </header>
+
+        <section class="biz-work-card" aria-labelledby="purchaseRequestTitle">
+          <div class="register-setup-card">
+            <section class="register-select-block" aria-labelledby="purchaseRequestTitle">
+              <h2 id="purchaseRequestTitle">1. 상품권 종류 선택</h2>
+              <div class="gift-card-picker is-loading" role="radiogroup" aria-label="상품권 종류 선택" data-gift-card-picker>
+                <div class="gift-option-placeholder">상품권 목록을 불러오는 중입니다.</div>
+              </div>
+            </section>
+          </div>
+
+          <div class="register-workspace">
+            <section class="register-input-card" aria-label="등록 방식 선택">
+              <section class="face-value-selector" aria-labelledby="faceValueTitle">
+                <h2 id="faceValueTitle">2. 액면가 선택</h2>
+                <div class="face-value-buttons" role="radiogroup" aria-label="액면가 선택" data-face-value-buttons></div>
+                <p class="face-value-help" id="faceValueHelp">붙여넣은 줄에 금액이 있으면 줄 금액을 우선 적용합니다.</p>
+              </section>
+
+              <div class="register-tabs" role="tablist" aria-label="등록 방식">
+                <button class="is-active" type="button" data-register-tab="single">직접 입력</button>
+                <button type="button" data-register-tab="bulk">대량 등록</button>
+                <button type="button" data-register-tab="ocr">OCR 등록</button>
+              </div>
+
+              <div class="register-tab-panel is-active" data-register-panel="single">
+                <div class="register-section-head">
+                  <h2 id="pinInputTitle">핀번호 직접 입력</h2>
+                  <p>4자리씩 입력하거나 16자리 핀번호를 붙여넣어 등록 예정 목록에 추가합니다.</p>
+                </div>
+                <div class="single-pin-entry single-pin-entry--segmented" aria-label="핀번호 4자리씩 직접 입력">
+                  <div class="pin-row single-manual-row">
+                    <input type="text" inputmode="numeric" maxlength="4" placeholder="0000" aria-label="핀번호 첫 번째 4자리" /><span>-</span><input type="text" inputmode="numeric" maxlength="4" placeholder="0000" aria-label="핀번호 두 번째 4자리" /><span>-</span><input type="text" inputmode="numeric" maxlength="4" placeholder="0000" aria-label="핀번호 세 번째 4자리" /><span>-</span><input type="text" inputmode="numeric" maxlength="4" placeholder="0000" aria-label="핀번호 네 번째 4자리" />
+                  </div>
+                  <button class="add-single-pin" id="addSinglePin" type="button">등록 예정 목록에 추가</button>
+                </div>
+              </div>
+
+              <div class="register-tab-panel" data-register-panel="bulk" hidden>
+                <div class="register-section-head">
+                  <h2 id="bulkInputTitle">대량 등록</h2>
+                  <p>여러 핀번호를 한 번에 붙여넣어 등록 예정 목록에 추가합니다.</p>
+                </div>
+                <label class="paste-box" for="pinBulkText" data-pin-panel="bulk">
+                  <textarea id="pinBulkText" name="pinBulkText" maxlength="10000" placeholder="핀번호를 줄바꿈으로 붙여넣으세요.&#10;&#10;예시)&#10;2342014243781000 10&#10;2342014243781000 100,000&#10;2300-0000-0000-0000 5"></textarea>
+                  <span>0 / 10,000</span>
+                </label>
+                <button class="bulk-add-button" id="addBulkPins" type="button">붙여넣은 핀번호 추가</button>
+              </div>
+
+              <div class="register-tab-panel" data-register-panel="ocr" hidden>
+                <div class="register-section-head">
+                  <h2 id="imageUploadTitle">OCR 등록</h2>
+                  <p>상품권 이미지를 올려 OCR 결과를 확인한 뒤 등록 예정 목록에 추가합니다.</p>
+                </div>
+                <label class="ocr-dropzone" for="giftCardImage">
+                  <input id="giftCardImage" name="giftCardImage" type="file" accept="image/png,image/jpeg,image/jpg,image/webp,.png,.jpg,.jpeg,.webp" multiple />
+                  <span class="ocr-image-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M10 36h28a4 4 0 0 0 4-4V16a4 4 0 0 0-4-4H10a4 4 0 0 0-4 4v16a4 4 0 0 0 4 4z" /><path d="m14 31 8-8 6 6 4-4 6 6" /><path d="M31 19h.01" /></svg></span>
+                  <strong>상품권 이미지를 클릭해서 업로드하거나 드래그 앤 드롭 해주세요.</strong>
+                  <em>한 번에 최대 10장까지 등록할 수 있습니다.</em>
+                  <small>PNG, JPG, WEBP 지원 · 최대 10장까지 등록 가능</small>
+                </label>
+                <div class="ocr-action-row">
+                  <button class="ocr-run-button" id="runOcrButton" type="button">OCR로 등록</button>
+                  <button class="ocr-clear-review-button" id="clearOcrResultsButton" type="button" hidden>전체 비우기</button>
+                  <span class="ocr-status" id="ocrStatus" role="status" aria-live="polite"></span>
+                </div>
+                <div class="ocr-review-summary" id="ocrReviewSummary" hidden>OCR 결과 0건</div>
+                <div class="ocr-review-list" id="ocrReviewList" hidden></div>
+                <button class="ocr-add-review-button" id="addOcrResultsButton" type="button" hidden>등록 예정 목록에 추가</button>
+              </div>
+            </section>
+
+            <section class="register-list-card" aria-labelledby="registerListTitle">
+              <div class="register-section-head">
+                <div>
+                  <h2 id="registerListTitle">등록 예정 목록</h2>
+                  <p>직접 입력, 대량 붙여넣기, OCR 결과가 이 목록에 모입니다.</p>
+                </div>
+                <div class="register-list-summary" aria-label="등록 예정 요약">
+                  <span>총 <strong data-register-count>0</strong>건</span>
+                  <span>총 액면가 <strong data-register-total>0원</strong></span>
+                  <button type="button" id="clearPendingItems">전체 삭제</button>
+                </div>
+              </div>
+              <div class="ocr-table-wrap register-list-wrap">
+                <table class="ocr-table">
+                  <caption>등록 예정 목록</caption>
+                  <thead><tr><th scope="col">No.</th><th scope="col">핀번호</th><th scope="col">상품권 종류</th><th scope="col">액면가</th><th scope="col">상태</th></tr></thead>
+                  <tbody>
+                    <tr class="empty-row">
+                      <td colspan="5">
+                        <div class="empty-state"><span class="empty-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M14 18h20l3 8v12H11V26l3-8z" /><path d="M11 26h9l2 4h4l2-4h9" /></svg></span><strong>등록 예정 핀번호가 없습니다.</strong></div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          <p class="register-status" id="purchaseRequestStatus" role="status" aria-live="polite"></p>
+          <button class="register-submit" id="purchaseRequestSubmit" type="button">등록하기</button>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/js/biz-auth.js"></script>
+    <script type="module" src="/js/biz-register.js"></script>
   </body>
 </html>

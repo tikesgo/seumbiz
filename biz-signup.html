@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SEUMBiz | 업체 등록 신청</title>
+    <meta name="description" content="SEUMBiz 업체 등록 신청 화면" />
+    <link rel="stylesheet" href="/css/common.css" />
+    <link rel="stylesheet" href="/css/biz.css" />
+  </head>
+  <body class="biz-auth-body biz-auth-body--signup">
+    <main class="biz-auth-shell biz-auth-shell--signup" aria-labelledby="signupTitle">
+      <section class="biz-auth-intro biz-auth-intro--signup">
+        <a class="biz-auth-logo" href="/biz-login.html" aria-label="SEUMBiz 로그인">
+          <strong><span>SEUM</span><span>Biz</span></strong>
+          <small>업체 전용 운영 플랫폼</small>
+        </a>
+        <div class="biz-auth-copy biz-auth-copy--signup">
+          <span>Partner Onboarding</span>
+          <h1>업체 등록 신청 후<br />관리자 승인으로 이용을 시작합니다.</h1>
+          <p>승인 전에는 로그인할 수 없습니다. 연락처와 카카오톡 ID로 승인 안내를 받을 수 있습니다.</p>
+        </div>
+      </section>
+
+      <section class="biz-auth-card biz-auth-card--wide biz-auth-card--signup">
+        <div class="biz-auth-card-head biz-auth-card-head--signup">
+          <p>REGISTRATION REQUEST</p>
+          <h2 id="signupTitle">업체 등록 신청</h2>
+          <span>신청 후 관리자 승인 완료 시 이용 가능합니다.</span>
+        </div>
+
+        <form class="biz-auth-form biz-auth-form--grid biz-auth-form--signup" id="bizSignupForm" novalidate>
+          <label for="signupCompany">업체명 <input id="signupCompany" name="signupCompany" type="text" autocomplete="organization" placeholder="업체명을 입력해주세요" required /></label>
+          <label for="signupManager">담당자명 <input id="signupManager" name="signupManager" type="text" autocomplete="name" placeholder="담당자명을 입력해주세요" required /></label>
+          <label for="signupPhone">연락처 <input id="signupPhone" name="signupPhone" type="tel" autocomplete="tel" placeholder="연락처를 입력해주세요" required /></label>
+          <label for="signupKakao">카카오톡 ID <input id="signupKakao" name="signupKakao" type="text" placeholder="카카오톡 ID를 입력해주세요" required /></label>
+          <label for="signupLoginId">이메일 <input id="signupLoginId" name="signupLoginId" type="email" autocomplete="username" placeholder="로그인에 사용할 이메일을 입력해주세요" required /></label>
+          <label for="signupPassword">비밀번호 <input id="signupPassword" name="signupPassword" type="password" autocomplete="new-password" placeholder="비밀번호를 입력해주세요" required /></label>
+          <label class="biz-auth-field-wide" for="signupPasswordConfirm">비밀번호 확인 <input id="signupPasswordConfirm" name="signupPasswordConfirm" type="password" autocomplete="new-password" placeholder="비밀번호를 다시 입력해주세요" required /></label>
+          <p class="biz-auth-notice biz-auth-notice--signup">승인 전에는 포털에 접근할 수 없습니다. 승인 후 같은 이메일과 비밀번호로 로그인해주세요.</p>
+          <p class="biz-auth-status biz-auth-field-wide" id="bizSignupStatus" role="status"></p>
+          <button class="biz-auth-submit biz-auth-field-wide" id="bizSignupSubmit" type="submit">업체 등록 신청</button>
+        </form>
+
+        <p class="biz-auth-link">이미 계정이 있으신가요? <a href="/biz-login.html">로그인</a></p>
+      </section>
+    </main>
+    <script type="module" src="/js/biz-signup.js"></script>
+  </body>
+</html>

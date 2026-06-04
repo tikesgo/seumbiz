@@ -1,0 +1,986 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SEUMBiz 관리자</title>
+    <link rel="stylesheet" href="/seumbiz-admin.css" />
+    <script src="/seumbiz-admin/config.js"></script>
+    <script type="module" src="/seumbiz-admin.js"></script>
+  </head>
+  <body>
+    <main class="sb-admin-shell">
+      <section class="sb-login" id="loginPanel">
+        <div class="sb-login-hero">
+          <p class="sb-eyebrow">SEUMBiz Admin</p>
+          <h1>업체 매입과 정산 흐름을 관리합니다.</h1>
+          <p>매입 승인, 출금 완료, 업체 잔액 흐름을 SEUMBiz 전용 데이터로만 확인합니다.</p>
+        </div>
+
+        <form class="sb-login-card" id="loginForm">
+          <div>
+            <p class="sb-eyebrow">ADMIN LOGIN</p>
+            <h2>관리자 로그인</h2>
+            <p>승인된 관리자 계정으로 접속하세요.</p>
+          </div>
+          <label>
+            이메일
+            <input id="adminEmail" type="email" placeholder="admin@test.com" autocomplete="username" required />
+          </label>
+          <label>
+            비밀번호
+            <input id="adminPassword" type="password" autocomplete="current-password" required />
+          </label>
+          <button class="sb-primary-button" id="loginButton" type="submit">로그인</button>
+          <p class="sb-message" id="loginMessage" role="status"></p>
+        </form>
+      </section>
+
+      <section class="sb-app" id="adminApp" hidden>
+        <aside class="sb-sidebar">
+          <a class="sb-brand" href="/seumbiz-admin" aria-label="SEUMBiz 관리자 홈">
+            <strong>SEUM<span>Biz</span></strong>
+            <small>관리자 콘솔</small>
+          </a>
+
+                              <nav class="sb-nav" aria-label="SEUMBiz admin menu">
+            <button class="is-active" type="button" data-view="dashboardView"><span class="sb-nav-label">&#45824;&#49884;&#48372;&#46300;</span></button>
+            <button type="button" data-view="purchaseView">
+              <span class="sb-nav-label">&#47588;&#51077;&#49888;&#52397; &#44288;&#47532;</span>
+              <span class="sb-nav-badge" id="purchaseNavBadge" hidden aria-label="대기 매입신청"></span>
+            </button>
+            <button type="button" data-view="withdrawView">
+              <span class="sb-nav-label">&#52636;&#44552;&#49888;&#52397; &#44288;&#47532;</span>
+              <span class="sb-nav-badge" id="withdrawNavBadge" hidden aria-label="대기 출금신청"></span>
+            </button>
+            <button type="button" data-view="settlementView"><span class="sb-nav-label">&#51221;&#49328; &#44288;&#47532;</span></button>
+            <button type="button" data-view="companyView">
+              <span class="sb-nav-label">&#50629;&#52404; &#44288;&#47532;</span>
+              <span class="sb-nav-badge" id="companyNavBadge" hidden aria-label="대기 업체 가입"></span>
+            </button>
+            <button type="button" data-view="giftcardView"><span class="sb-nav-label">&#49345;&#54408;&#44428; &#44288;&#47532;</span></button>
+            <button type="button" data-view="telegramView"><span class="sb-nav-label">&#53588;&#47112;&#44536;&#47016; &#50508;&#47548; &#44288;&#47532;</span></button>
+            <button type="button" data-view="adminLogView"><span class="sb-nav-label">&#44288;&#47532;&#51088; &#47196;&#44536;</span></button>
+          </nav>
+
+          <div class="sb-sidebar-note">
+            <strong>운영 원칙</strong>
+            <p>승인과 출금완료는 RPC로만 처리합니다.</p>
+          </div>
+        </aside>
+
+        <section class="sb-main">
+          <header class="sb-header">
+            <div>
+              <p class="sb-eyebrow">SEUMBIZ OPERATIONS</p>
+              <h1 id="pageTitle">SEUMBiz 대시보드</h1>
+            </div>
+            <div class="sb-header-actions">
+              <span id="adminName">관리자</span>
+              <button class="sb-outline-button sb-sound-toggle" id="soundToggleButton" type="button" aria-pressed="true">&#128276; &#49548;&#47532; &#53012;</button>
+              <button class="sb-outline-button sb-sound-test" id="soundTestButton" type="button">&#9835; &#53580;&#49828;&#53944;</button>
+              <button class="sb-outline-button" id="refreshButton" type="button">새로고침</button>
+              <button class="sb-outline-button" id="logoutButton" type="button">로그아웃</button>
+            </div>
+          </header>
+
+          <p class="sb-message" id="appMessage" role="status"></p>
+
+          <section class="sb-view" id="dashboardView">
+            <div class="sb-dashboard-stack">
+              <div class="sb-summary-grid sb-dashboard-kpi-grid">
+                <button class="sb-summary-card sb-summary-card-action" id="dashboardPurchaseKpi" type="button">
+                  <span>매입 신청 대기</span>
+                  <strong id="dashboardPurchasePendingCount">-</strong>
+                  <small>pending / reviewing</small>
+                </button>
+                <button class="sb-summary-card sb-summary-card-action" id="dashboardWithdrawKpi" type="button">
+                  <span>출금 신청 대기</span>
+                  <strong id="dashboardWithdrawPendingCount">-</strong>
+                  <small>pending</small>
+                </button>
+                <button class="sb-summary-card sb-summary-card-action" id="dashboardCompanyKpi" type="button">
+                  <span>업체 승인 대기</span>
+                  <strong id="dashboardCompanyPendingCount">-</strong>
+                  <small>pending</small>
+                </button>
+                <article class="sb-summary-card sb-summary-card-primary sb-dashboard-kpi-static">
+                  <span>오늘 승인 금액</span>
+                  <strong id="dashboardTodayApprovedAmount">-</strong>
+                  <small id="dashboardTodayApprovedCount">승인 0건</small>
+                </article>
+              </div>
+
+              <section class="sb-panel sb-dashboard-panel">
+                <div class="sb-panel-header">
+                  <div>
+                    <h2>최근 매입 신청</h2>
+                    <p>최근 접수 8건</p>
+                  </div>
+                  <button class="sb-outline-button" id="dashboardPurchaseAllButton" type="button">전체 보기</button>
+                </div>
+                <div class="sb-table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>업체</th>
+                        <th>접수번호</th>
+                        <th>상품권</th>
+                        <th class="is-amount">정산금</th>
+                        <th>상태</th>
+                        <th>접수시간</th>
+                        <th>작업</th>
+                      </tr>
+                    </thead>
+                    <tbody id="dashboardPurchaseBody">
+                      <tr>
+                        <td colspan="7">불러오는 중입니다.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section class="sb-panel sb-dashboard-panel">
+                <div class="sb-panel-header">
+                  <div>
+                    <h2>최근 관리자 작업</h2>
+                    <p>최근 처리 10건</p>
+                  </div>
+                  <button class="sb-outline-button" id="dashboardAdminLogAllButton" type="button">로그 전체</button>
+                </div>
+                <div class="sb-table-wrap sb-admin-log-table-wrap">
+                  <table class="sb-admin-log-table">
+                    <thead>
+                      <tr>
+                        <th class="is-center">시간</th>
+                        <th class="is-center">구분</th>
+                        <th>처리내용</th>
+                        <th>업체</th>
+                        <th class="is-amount">금액</th>
+                        <th>메모</th>
+                      </tr>
+                    </thead>
+                    <tbody id="dashboardAdminLogBody">
+                      <tr>
+                        <td colspan="6">불러오는 중입니다.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          </section>
+
+          <section class="sb-view" id="purchaseView" hidden>
+            <section class="sb-panel">
+              <div class="sb-panel-header">
+                <div>
+                  <h2>업체 매입신청 관리</h2>
+                  <p>접수번호 단위로 상세를 확인하고 승인 처리합니다.</p>
+                </div>
+                <button class="sb-outline-button" id="purchaseReloadButton" type="button">목록 새로고침</button>
+              </div>
+
+              <div class="sb-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>업체명</th>
+                      <th>접수번호</th>
+                      <th>상품권</th>
+                      <th>신청 액면가</th>
+                      <th>예상 정산금</th>
+                      <th>상태</th>
+                      <th>접수시간</th>
+                      <th>작업</th>
+                    </tr>
+                  </thead>
+                  <tbody id="purchaseBody">
+                    <tr>
+                      <td colspan="8">불러오는 중입니다.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="sb-pagination" id="purchasePagination" hidden></div>
+            </section>
+          </section>
+
+          <section class="sb-view" id="withdrawView" hidden>
+            <section class="sb-panel">
+              <div class="sb-panel-header">
+                <div>
+                  <h2>출금신청 관리</h2>
+                  <p>계좌정보는 저장하지 않고, 카카오톡 확인 후 완료 처리합니다.</p>
+                </div>
+                <button class="sb-outline-button" id="withdrawReloadButton" type="button">목록 새로고침</button>
+              </div>
+
+              <div class="sb-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>업체명</th>
+                      <th>신청금액</th>
+                      <th>상태</th>
+                      <th>신청시간</th>
+                      <th>작업</th>
+                    </tr>
+                  </thead>
+                  <tbody id="withdrawBody">
+                    <tr>
+                      <td colspan="5">불러오는 중입니다.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="sb-pagination" id="withdrawPagination" hidden></div>
+            </section>
+          </section>
+
+          <section class="sb-view" id="settlementView" hidden>
+            <div class="sb-summary-grid sb-settlement-summary-grid">
+              <article class="sb-summary-card sb-summary-card-primary">
+                <span>&#51204;&#52404; &#50629;&#52404; &#51092;&#50529;</span>
+                <strong id="settlementTotalBalance">-</strong>
+                <small>&#49849;&#51064;&#50756;&#47308;&middot;&#52636;&#44552;&#50756;&#47308; &#48152;&#50689; &#44592;&#51456;</small>
+              </article>
+              <article class="sb-summary-card">
+                <span>&#44552;&#51068; &#47588;&#51077; &#50529;&#47732;&#44032;</span>
+                <strong id="settlementTodayApproved">-</strong>
+                <small id="settlementFaceValueHelp">&#50724;&#45720; &#51217;&#49688;/&#49849;&#51064; &#44592;&#51456;</small>
+              </article>
+              <article class="sb-summary-card">
+                <span>&#44552;&#51068; &#49892;&#51228; &#47588;&#51077;&#44552;&#50529;</span>
+                <strong id="settlementActualPurchase">-</strong>
+                <small>&#49849;&#51064;&#46108; &#51221;&#49328; &#48152;&#50689; &#44552;&#50529;</small>
+              </article>
+              <article class="sb-summary-card">
+                <span>&#44552;&#51068; &#49688;&#51061;</span>
+                <strong id="settlementProfit">-</strong>
+                <small>&#50529;&#47732;&#44032; - &#49892;&#51228; &#47588;&#51077;&#44552;&#50529;</small>
+              </article>
+              <article class="sb-summary-card">
+                <span>&#44552;&#51068; &#52636;&#44552; &#44552;&#50529;</span>
+                <strong id="settlementTodayWithdraw">-</strong>
+                <small>&#50756;&#47308; &#52376;&#47532;&#46108; &#52636;&#44552; &#54633;&#44228;</small>
+              </article>
+              <article class="sb-summary-card">
+                <span>&#52636;&#44552; &#45824;&#44592; &#44552;&#50529;</span>
+                <strong id="settlementPendingWithdraw">-</strong>
+                <small>&#52376;&#47532; &#45824;&#44592; &#51473;&#51064; &#52636;&#44552;&#49888;&#52397; &#54633;&#44228;</small>
+              </article>
+              <article class="sb-summary-card">
+                <span>&#51221;&#49328; &#54596;&#50836; &#50629;&#52404;</span>
+                <strong id="settlementRequiredCompanies">-</strong>
+                <small>&#51092;&#50529; &#48372;&#50976; &#50629;&#52404; &#49688;</small>
+              </article>
+            </div>
+
+            <section class="sb-panel sb-settlement-panel">
+              <div class="sb-panel-header sb-settlement-header">
+                <div>
+                  <h2>&#50629;&#52404;&#48324; &#51221;&#49328; &#54788;&#54889;</h2>
+                  <p>&#50629;&#52404; &#51092;&#50529;&#44284; &#49849;&#51064;&middot;&#52636;&#44552; &#55120;&#47492;&#51012; &#50868;&#50689; &#54869;&#51064;&#50857;&#51004;&#47196; &#51312;&#54924;&#54633;&#45768;&#45796;.</p>
+                </div>
+                <div class="sb-settlement-header-actions">
+                  <span class="sb-last-refresh" id="settlementLastRefresh">&#47560;&#51648;&#47561; &#44081;&#49888;: -</span>
+                  <button class="sb-outline-button" id="settlementReloadButton" type="button">&#49352;&#47196;&#44256;&#52840;</button>
+                </div>
+              </div>
+
+              <div class="sb-settlement-toolbar">
+                <div class="sb-settlement-filters">
+                  <label>
+                    &#49884;&#51089;&#51068;
+                    <input id="settlementStartDate" type="date" />
+                  </label>
+                  <label>
+                    &#51333;&#47308;&#51068;
+                    <input id="settlementEndDate" type="date" />
+                  </label>
+                  <button class="sb-outline-button" id="settlementSearchButton" type="button">&#44160;&#49353;</button>
+                  <button class="sb-outline-button" id="settlementResetButton" type="button">&#52488;&#44592;&#54868;</button>
+                </div>
+                <div class="sb-settlement-downloads">
+                  <button class="sb-outline-button" id="settlementCsvButton" type="button">&#50641;&#49472; &#45796;&#50868;&#47196;&#46300;</button>
+                  <button class="sb-outline-button" id="settlementTxtButton" type="button">TXT &#45796;&#50868;&#47196;&#46300;</button>
+                </div>
+              </div>
+
+              <div class="sb-table-wrap sb-settlement-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>&#50629;&#52404;&#47749;</th>
+                      <th class="is-amount">&#54788;&#51116; &#51092;&#50529;</th>
+                      <th class="is-amount">&#52509; &#49849;&#51064; &#44552;&#50529;</th>
+                      <th class="is-amount">&#52509; &#52636;&#44552; &#50756;&#47308;</th>
+                      <th class="is-amount">&#52636;&#44552; &#45824;&#44592;</th>
+                      <th class="is-date">&#52572;&#44540; &#49849;&#51064;&#51068;</th>
+                      <th class="is-date">&#52572;&#44540; &#52636;&#44552;&#51068;</th>
+                      <th class="is-action">&#49345;&#49464;</th>
+                    </tr>
+                  </thead>
+                  <tbody id="settlementBody">
+                    <tr>
+                      <td colspan="8">&#48520;&#47084;&#50724;&#45716; &#51473;&#51077;&#45768;&#45796;.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+
+          <section class="sb-view" id="companyView" hidden>
+            <section class="sb-panel">
+              <div class="sb-panel-header">
+                <div>
+                  <h2>&#50629;&#52404; &#44288;&#47532;</h2>
+                  <p>&#50629;&#52404; &#51221;&#48372;&#50752; &#49345;&#53468;, &#54788;&#51116; &#51092;&#50529;&#51012; &#54869;&#51064;&#54616;&#44256; &#49688;&#46041; &#47672;&#45768; &#51648;&#44553;/&#54924;&#49688;&#47484; &#52376;&#47532;&#54633;&#45768;&#45796;.</p>
+                </div>
+                <button class="sb-outline-button" id="companyReloadButton" type="button">&#49352;&#47196;&#44256;&#52840;</button>
+              </div>
+
+              <div class="sb-table-wrap sb-company-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>&#50629;&#52404;&#47749;</th>
+                      <th>&#45812;&#45817;&#51088;</th>
+                      <th>&#50672;&#46973;&#52376;</th>
+                      <th>&#52852;&#52852;&#50724;&#53665; ID</th>
+                      <th>&#49345;&#53468;</th>
+                      <th class="is-amount">&#54788;&#51116; &#51092;&#50529;</th>
+                      <th>&#44032;&#51077;&#51068;</th>
+                      <th>&#49345;&#49464;</th>
+                    </tr>
+                  </thead>
+                  <tbody id="companyBody">
+                    <tr>
+                      <td colspan="8">&#48520;&#47084;&#50724;&#45716; &#51473;&#51077;&#45768;&#45796;.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+
+          <section class="sb-view" id="giftcardView" hidden>
+            <section class="sb-panel">
+              <div class="sb-panel-header">
+                <div>
+                  <h2>상품권 관리</h2>
+                  <p>SEUMBiz 전용 상품권 코드, 로고, 요율, 액면가와 노출 상태를 관리합니다.</p>
+                </div>
+                <button class="sb-outline-button" id="giftcardReloadButton" type="button">목록 새로고침</button>
+              </div>
+
+              <div class="sb-giftcard-actions">
+                <button class="sb-primary-button" id="giftcardOpenCreateButton" type="button">+ 상품권 등록</button>
+              </div>
+
+              <div class="sb-table-wrap sb-giftcard-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>상품권</th>
+                      <th>코드</th>
+                      <th>요율</th>
+                      <th>액면가</th>
+                      <th>노출</th>
+                      <th>사용</th>
+                      <th>미처리</th>
+                      <th>전체</th>
+                      <th>정렬</th>
+                      <th>작업</th>
+                    </tr>
+                  </thead>
+                  <tbody id="giftcardBody">
+                    <tr>
+                      <td colspan="10">불러오는 중입니다.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+
+          <section class="sb-view" id="telegramView" hidden>
+            <section class="sb-panel">
+              <div class="sb-panel-header">
+                <div>
+                  <h2>&#53588;&#47112;&#44536;&#47016; &#50508;&#47548; &#44288;&#47532;</h2>
+                  <p>SEUMBiz &#47588;&#51077;&#49888;&#52397;&#44284; &#52636;&#44552;&#49888;&#52397; &#50508;&#47548;&#51012; &#48155;&#51012; &#49688;&#49888;&#51088;&#47484; &#44288;&#47532;&#54633;&#45768;&#45796;.</p>
+                </div>
+                <button class="sb-outline-button" id="telegramReloadButton" type="button">&#49352;&#47196;&#44256;&#52840;</button>
+              </div>
+
+              <form class="sb-telegram-form" id="telegramRecipientForm">
+                <label>
+                  &#51060;&#47492;
+                  <input id="telegramRecipientName" type="text" placeholder="고티켓" autocomplete="off" required />
+                </label>
+                <label>
+                  Chat ID
+                  <input id="telegramRecipientChatId" type="text" placeholder="123456789" autocomplete="off" required />
+                </label>
+                <button class="sb-primary-button" id="telegramRecipientSaveButton" type="submit">&#49688;&#49888;&#51088; &#52628;&#44032;</button>
+              </form>
+              <p class="sb-message" id="telegramRecipientMessage" role="status"></p>
+
+              <div class="sb-table-wrap sb-telegram-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>&#49324;&#50857;</th>
+                      <th>&#51060;&#47492;</th>
+                      <th>Chat ID</th>
+                      <th>&#46321;&#47197;&#51068;</th>
+                      <th>&#44288;&#47532;</th>
+                    </tr>
+                  </thead>
+                  <tbody id="telegramRecipientBody">
+                    <tr>
+                      <td colspan="5">&#48520;&#47084;&#50724;&#45716; &#51473;&#51077;&#45768;&#45796;.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+
+          <section class="sb-view" id="adminLogView" hidden>
+            <section class="sb-panel sb-admin-log-panel">
+              <div class="sb-panel-header sb-admin-log-panel-header">
+                <div>
+                  <h2>관리자 로그</h2>
+                  <p>관리자 처리 이력 조회</p>
+                </div>
+                <button class="sb-ghost-button sb-admin-log-reload" id="adminLogReloadButton" type="button">새로고침</button>
+              </div>
+
+              <div class="sb-admin-log-toolbar">
+                <div class="sb-admin-log-toolbar-row">
+                  <div class="sb-admin-log-periods" role="group" aria-label="기간 빠른 선택">
+                    <button class="sb-admin-log-chip is-active" type="button" data-admin-log-period="all">전체</button>
+                    <button class="sb-admin-log-chip" type="button" data-admin-log-period="today">오늘</button>
+                    <button class="sb-admin-log-chip" type="button" data-admin-log-period="yesterday">어제</button>
+                    <button class="sb-admin-log-chip" type="button" data-admin-log-period="last7">최근 7일</button>
+                    <button class="sb-admin-log-chip" type="button" data-admin-log-period="last30">최근 30일</button>
+                    <button class="sb-admin-log-chip" type="button" data-admin-log-period="custom">직접 선택</button>
+                  </div>
+                  <div class="sb-admin-log-custom-dates" id="adminLogCustomDates" hidden>
+                    <label>
+                      시작일
+                      <input id="adminLogStartDate" type="date" />
+                    </label>
+                    <label>
+                      종료일
+                      <input id="adminLogEndDate" type="date" />
+                    </label>
+                  </div>
+                </div>
+
+                <div class="sb-admin-log-filters">
+                  <label>
+                    구분
+                    <select id="adminLogAction">
+                      <option value="">전체</option>
+                      <option value="purchase_approved">매입 승인</option>
+                      <option value="purchase_rejected">매입 반려</option>
+                      <option value="withdraw_completed">출금 완료</option>
+                      <option value="withdraw_rejected">출금 반려</option>
+                      <option value="manual_credit">머니 지급</option>
+                      <option value="manual_debit">머니 회수</option>
+                    </select>
+                  </label>
+                  <label>
+                    업체
+                    <select id="adminLogCompany">
+                      <option value="">전체</option>
+                    </select>
+                  </label>
+                  <label>
+                    관리자
+                    <select id="adminLogAdmin">
+                      <option value="">전체</option>
+                    </select>
+                  </label>
+                  <label class="sb-admin-log-search-label">
+                    검색
+                    <input id="adminLogSearch" type="search" placeholder="메모, 접수번호" autocomplete="off" />
+                  </label>
+                  <div class="sb-admin-log-filter-actions">
+                    <button class="sb-primary-button sb-admin-log-search-btn" id="adminLogSearchButton" type="button">조회</button>
+                    <button class="sb-ghost-button" id="adminLogResetButton" type="button">초기화</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="sb-table-wrap sb-admin-log-table-wrap">
+                <table class="sb-admin-log-table">
+                  <thead>
+                    <tr>
+                      <th>업체</th>
+                      <th>처리내용</th>
+                      <th>관리자</th>
+                      <th class="is-center">시간</th>
+                      <th class="is-center">구분</th>
+                      <th class="is-amount">금액</th>
+                      <th>메모</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminLogBody">
+                    <tr>
+                      <td colspan="7">불러오는 중입니다.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="sb-pagination sb-admin-log-pagination" id="adminLogPagination" hidden></div>
+            </section>
+          </section>
+        </section>
+      </section>
+    </main>
+
+
+    <div class="sb-modal" id="companyModal" hidden>
+      <div class="sb-modal-backdrop" data-close-company-modal></div>
+      <section class="sb-modal-card sb-company-modal-card" role="dialog" aria-modal="true" aria-labelledby="companyModalTitle">
+        <header class="sb-modal-header">
+          <div>
+            <p class="sb-eyebrow">COMPANY DETAIL</p>
+            <h2 id="companyModalTitle">&#50629;&#52404; &#49345;&#49464;</h2>
+          </div>
+          <button class="sb-icon-button" type="button" data-close-company-modal aria-label="close">&times;</button>
+        </header>
+
+        <div class="sb-detail-grid sb-company-detail-grid" id="companyDetailGrid"></div>
+
+        <div class="sb-company-modal-grid">
+          <section class="sb-company-section">
+            <div class="sb-form-head">
+              <h3>&#50629;&#52404; &#51221;&#48372;</h3>
+            </div>
+            <form class="sb-company-form" id="companyForm">
+              <input id="companyId" type="hidden" />
+              <div class="sb-form-row">
+                <label>
+                  &#50629;&#52404;&#47749;
+                  <input id="companyName" type="text" autocomplete="off" required />
+                </label>
+                <label>
+                  &#49345;&#53468;
+                  <select id="companyStatus" required>
+                    <option value="pending">&#49849;&#51064;&#45824;&#44592;</option>
+                    <option value="approved">&#49849;&#51064;&#50756;&#47308;</option>
+                    <option value="rejected">&#48152;&#47140;</option>
+                    <option value="suspended">&#51221;&#51648;</option>
+                  </select>
+                </label>
+              </div>
+              <div class="sb-form-row">
+                <label>
+                  &#45812;&#45817;&#51088;&#47749;
+                  <input id="companyManagerName" type="text" autocomplete="off" />
+                </label>
+                <label>
+                  &#50672;&#46973;&#52376;
+                  <input id="companyPhone" type="text" autocomplete="off" />
+                </label>
+              </div>
+              <div class="sb-form-row">
+                <label>
+                  &#52852;&#52852;&#50724;&#53665; ID
+                  <input id="companyKakaoId" type="text" autocomplete="off" />
+                </label>
+              </div>
+              <p class="sb-message" id="companyMessage" role="status"></p>
+              <div class="sb-company-actions">
+                <button class="sb-outline-button" id="companyApproveButton" type="button">&#49849;&#51064;</button>
+                <button class="sb-outline-button" id="companyRejectButton" type="button">&#48152;&#47140;</button>
+                <button class="sb-primary-button" id="companySaveButton" type="submit">&#50629;&#52404; &#51221;&#48372; &#51200;&#51109;</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="sb-company-section">
+            <div class="sb-form-head">
+              <h3>&#47672;&#45768; &#51648;&#44553;/&#54924;&#49688;</h3>
+            </div>
+            <form class="sb-company-adjustment-form" id="companyAdjustmentForm">
+              <div class="sb-company-balance-preview">
+                <div>
+                  <span>&#52376;&#47532; &#51204; &#54788;&#51116; &#51092;&#50529;</span>
+                  <strong id="companyBalanceBefore">-</strong>
+                </div>
+                <div>
+                  <span>&#52376;&#47532; &#54980; &#50696;&#49345; &#51092;&#50529;</span>
+                  <strong id="companyBalanceAfter">-</strong>
+                </div>
+              </div>
+              <div class="sb-form-row">
+                <label>
+                  &#44396;&#48516;
+                  <select id="companyAdjustmentType" required>
+                    <option value="credit">&#47672;&#45768; &#51648;&#44553;</option>
+                    <option value="debit">&#47672;&#45768; &#54924;&#49688;</option>
+                  </select>
+                </label>
+                <label>
+                  &#44552;&#50529;
+                  <input id="companyAdjustmentAmount" type="number" min="1" step="1" placeholder="100000" required />
+                </label>
+              </div>
+              <label>
+                &#49324;&#50976; <small>&#54596;&#49688;</small>
+                <input id="companyAdjustmentReason" type="text" placeholder="&#50696;: &#49440;&#51648;&#44553; &#52376;&#47532;, &#50724;&#51077;&#44552; &#48373;&#44396;" autocomplete="off" required />
+              </label>
+              <label>
+                &#44288;&#47532;&#51088; &#47700;&#47784;
+                <textarea id="companyAdjustmentMemo" placeholder="&#45236;&#48512; &#54869;&#51064;&#50857; &#47700;&#47784;"></textarea>
+              </label>
+              <p class="sb-message" id="companyAdjustmentMessage" role="status"></p>
+              <div class="sb-company-actions">
+                <button class="sb-primary-button" id="companyAdjustmentButton" type="submit">&#52376;&#47532;</button>
+              </div>
+            </form>
+          </section>
+        </div>
+
+        <section class="sb-modal-section sb-company-rates-section">
+          <div class="sb-modal-section-header">
+            <div>
+              <h3>&#49345;&#54408;&#44428;&#48324; &#50836;&#50984; &#44288;&#47532;</h3>
+              <p class="sb-section-note">&#48708;&#50892;&#46108;&#47732; &#44536;&#47196;&#48268; &#44592;&#48376; &#50836;&#50984;&#51060; &#51201;&#50857;&#46104;&#50612; &#51080;&#49845;&#45768;&#45796;.</p>
+            </div>
+          </div>
+          <div class="sb-table-wrap sb-company-rates-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>&#49345;&#54408;&#44428;</th>
+                  <th>&#44536;&#47196;&#48268; &#44592;&#48376;</th>
+                  <th>&#50629;&#52404; &#50836;&#50984;</th>
+                  <th>&#52572;&#51333; &#51201;&#50857;</th>
+                  <th>&#49345;&#53468;</th>
+                </tr>
+              </thead>
+              <tbody id="companyGiftcardRatesBody"></tbody>
+            </table>
+          </div>
+          <p class="sb-message" id="companyGiftcardRatesMessage" role="status"></p>
+          <div class="sb-company-actions">
+            <button class="sb-primary-button" id="companyGiftcardRatesSaveButton" type="button">&#50836;&#50984; &#51200;&#51109;</button>
+          </div>
+        </section>
+
+        <section class="sb-modal-section">
+          <div class="sb-modal-section-header">
+            <h3>&#52572;&#44540; &#51092;&#50529; &#54876;&#46041;</h3>
+          </div>
+          <div class="sb-modal-table sb-company-ledger-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>&#45216;&#51676;</th>
+                  <th>&#44396;&#48516;</th>
+                  <th class="is-amount">&#44552;&#50529;</th>
+                  <th>&#49324;&#50976;/&#47700;&#47784;</th>
+                </tr>
+              </thead>
+              <tbody id="companyLedgerBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </div>
+
+    <div class="sb-modal" id="giftcardModal" hidden>
+      <div class="sb-modal-backdrop" data-close-giftcard-modal></div>
+      <section class="sb-modal-card sb-giftcard-modal-card" role="dialog" aria-modal="true" aria-labelledby="giftcardFormTitle">
+        <header class="sb-modal-header">
+          <div>
+            <p class="sb-eyebrow">GIFTCARD TYPE</p>
+            <h2 id="giftcardFormTitle">상품권 등록</h2>
+          </div>
+          <button class="sb-icon-button" type="button" data-close-giftcard-modal aria-label="닫기">×</button>
+        </header>
+
+        <form class="sb-giftcard-form" id="giftcardForm">
+          <input id="giftcardId" type="hidden" />
+
+          <div class="sb-giftcard-modal-grid">
+            <section class="sb-giftcard-form-section sb-giftcard-form-section-main">
+              <h3>기본 정보</h3>
+              <div class="sb-form-row">
+                <label>
+                  코드
+                  <input id="giftcardCode" type="text" placeholder="LOTTE" autocomplete="off" required />
+                </label>
+                <label>
+                  상품권명
+                  <input id="giftcardName" type="text" placeholder="롯데상품권" autocomplete="off" required />
+                </label>
+              </div>
+
+              <div class="sb-form-row">
+                <label>
+                  기본 요율
+                  <input id="giftcardDefaultRate" type="number" min="0.01" max="100" step="0.01" placeholder="92.00" required />
+                </label>
+                <label>
+                  정렬 순서
+                  <input id="giftcardSortOrder" type="number" step="1" placeholder="10" />
+                </label>
+              </div>
+
+              <label>
+                사용 가능 액면가
+                <textarea id="giftcardEnabledAmounts" placeholder="[100000,300000,500000] 또는 100000,300000" required></textarea>
+              </label>
+
+              <div class="sb-toggle-row sb-toggle-row-wide">
+                <label class="sb-check-label">
+                  <input id="giftcardIsVisible" type="checkbox" checked />
+                  신규 신청 노출
+                </label>
+                <label class="sb-check-label">
+                  <input id="giftcardIsActive" type="checkbox" checked />
+                  신규 접수 가능
+                </label>
+              </div>
+            </section>
+
+            <section class="sb-giftcard-form-section sb-giftcard-logo-section">
+              <h3>로고</h3>
+              <div class="sb-logo-upload-block">
+                <div class="sb-logo-preview" id="giftcardLogoPreview" aria-label="로고 미리보기"></div>
+                <label>
+                  이미지 파일
+                  <input id="giftcardLogoFile" type="file" accept="image/png,image/jpeg,image/webp" />
+                </label>
+                <button class="sb-outline-button" id="giftcardLogoUploadButton" type="button">로고 업로드</button>
+              </div>
+              <p class="sb-field-help">PNG, JPG, WEBP 이미지를 업로드하면 로고 URL이 자동으로 입력됩니다.</p>
+            </section>
+          </div>
+
+          <details class="sb-advanced-settings">
+            <summary>고급 설정</summary>
+            <div class="sb-advanced-settings-body">
+              <label>
+                로고 URL
+                <input id="giftcardLogoUrl" type="text" placeholder="/uploads/giftcard-logo.png" autocomplete="off" required />
+              </label>
+              <label>
+                관리자 메모
+                <textarea id="giftcardAdminMemo" placeholder="운영 메모"></textarea>
+              </label>
+            </div>
+          </details>
+
+          <p class="sb-message" id="giftcardMessage" role="status"></p>
+          <div class="sb-modal-actions sb-giftcard-modal-actions">
+            <button class="sb-outline-button" type="button" data-close-giftcard-modal>취소</button>
+            <button class="sb-primary-button" id="giftcardSaveButton" type="submit">저장</button>
+          </div>
+        </form>
+      </section>
+    </div>
+    <div class="sb-modal" id="purchaseModal" hidden>
+      <div class="sb-modal-backdrop" data-close-modal></div>
+      <section class="sb-modal-card" role="dialog" aria-modal="true" aria-labelledby="purchaseModalTitle">
+        <header class="sb-modal-header">
+          <div>
+            <p class="sb-eyebrow">PURCHASE DETAIL</p>
+            <h2 id="purchaseModalTitle">매입신청 상세</h2>
+          </div>
+          <button class="sb-icon-button" type="button" data-close-modal aria-label="닫기">×</button>
+        </header>
+
+        <div class="sb-detail-grid" id="purchaseDetailGrid"></div>
+
+        <div class="sb-modal-section">
+          <div class="sb-modal-section-header">
+            <h3>핀번호 목록</h3>
+            <div class="sb-modal-section-actions">
+              <button class="sb-outline-button" id="copyPinsButton" type="button">핀번호 복사</button>
+              <button class="sb-outline-button" id="downloadPinsButton" type="button">핀번호 TXT 저장</button>
+            </div>
+          </div>
+          <div class="sb-modal-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>핀번호</th>
+                  <th>신청 액면가</th>
+                  <th>상태</th>
+                </tr>
+              </thead>
+              <tbody id="purchaseItemsBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="sb-purchase-action-panel" id="purchaseActionPanel">
+          <form class="sb-approve-form" id="approveForm">
+            <label>
+              관리자 확정 정산금
+              <input id="approvedSettlementAmount" type="number" min="1" step="1" placeholder="비우면 예상 정산금 사용" />
+            </label>
+            <label>
+              승인 메모
+              <textarea id="purchaseAdminMemo" placeholder="승인 처리 메모를 입력하세요."></textarea>
+            </label>
+            <button class="sb-primary-button" id="approveButton" type="submit">승인 처리</button>
+          </form>
+
+          <form class="sb-reject-form" id="rejectForm">
+            <label>
+              반려 사유
+              <textarea id="purchaseRejectMemo" placeholder="반려 사유를 입력하세요. (필수)" required></textarea>
+            </label>
+            <button class="sb-outline-button sb-reject-button" id="rejectButton" type="submit">반려 처리</button>
+          </form>
+        </div>
+
+        <div class="sb-purchase-closed-note" id="purchaseClosedNotice" hidden></div>
+      </section>
+    </div>
+
+    <div class="sb-modal" id="settlementModal" hidden>
+      <div class="sb-modal-backdrop" data-close-settlement-modal></div>
+      <section class="sb-modal-card sb-settlement-modal-card" role="dialog" aria-modal="true" aria-labelledby="settlementModalTitle">
+        <header class="sb-modal-header">
+          <div>
+            <p class="sb-eyebrow">SETTLEMENT DETAIL</p>
+            <h2 id="settlementModalTitle">&#51221;&#49328; &#49345;&#49464;</h2>
+          </div>
+          <button class="sb-icon-button" type="button" data-close-settlement-modal aria-label="close">&times;</button>
+        </header>
+
+        <div class="sb-detail-grid sb-settlement-detail-summary" id="settlementDetailGrid"></div>
+
+        <div class="sb-settlement-tabs" role="tablist" aria-label="settlement detail tabs">
+          <button class="is-active" type="button" data-settlement-tab="approved">&#49849;&#51064; &#45236;&#50669;</button>
+          <button type="button" data-settlement-tab="withdraw">&#52636;&#44552; &#45236;&#50669;</button>
+          <button type="button" data-settlement-tab="adjustment">&#49688;&#46041;&#51312;&#51221; &#45236;&#50669;</button>
+        </div>
+
+        <section class="sb-modal-section sb-settlement-tab-panel" data-settlement-panel="approved">
+          <div class="sb-modal-table sb-settlement-detail-table">
+            <table>
+              <thead>
+                <tr>
+                  <th class="is-date">&#45216;&#51676;</th>
+                  <th class="is-type">&#44396;&#48516;</th>
+                  <th class="is-amount">&#44552;&#50529;</th>
+                  <th>&#47700;&#47784;/&#49345;&#53468;</th>
+                </tr>
+              </thead>
+              <tbody id="settlementApprovedBody"></tbody>
+            </table>
+          </div>
+        </section>
+        <section class="sb-modal-section sb-settlement-tab-panel" data-settlement-panel="withdraw" hidden>
+          <div class="sb-modal-table sb-settlement-detail-table">
+            <table>
+              <thead>
+                <tr>
+                  <th class="is-date">&#45216;&#51676;</th>
+                  <th class="is-type">&#44396;&#48516;</th>
+                  <th class="is-amount">&#44552;&#50529;</th>
+                  <th>&#47700;&#47784;/&#49345;&#53468;</th>
+                </tr>
+              </thead>
+              <tbody id="settlementWithdrawBody"></tbody>
+            </table>
+          </div>
+        </section>
+        <section class="sb-modal-section sb-settlement-tab-panel" data-settlement-panel="adjustment" hidden>
+          <div class="sb-modal-table sb-settlement-detail-table">
+            <table>
+              <thead>
+                <tr>
+                  <th class="is-date">&#45216;&#51676;</th>
+                  <th class="is-type">&#44396;&#48516;</th>
+                  <th class="is-amount">&#44552;&#50529;</th>
+                  <th>&#47700;&#47784;/&#49345;&#53468;</th>
+                </tr>
+              </thead>
+              <tbody id="settlementAdjustmentBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </div>
+
+    <div class="sb-modal" id="withdrawModal" hidden>
+      <div class="sb-modal-backdrop" data-close-withdraw-modal></div>
+      <section class="sb-modal-card sb-modal-card-small" role="dialog" aria-modal="true" aria-labelledby="withdrawModalTitle">
+        <header class="sb-modal-header">
+          <div>
+            <p class="sb-eyebrow">WITHDRAW COMPLETE</p>
+            <h2 id="withdrawModalTitle">출금 완료 처리</h2>
+          </div>
+          <button class="sb-icon-button" type="button" data-close-withdraw-modal aria-label="닫기">×</button>
+        </header>
+
+        <div class="sb-detail-grid" id="withdrawDetailGrid"></div>
+
+        <form class="sb-approve-form" id="withdrawCompleteForm">
+          <label>
+            관리자 메모
+            <textarea id="withdrawAdminMemo" placeholder="카카오톡 확인 및 수동 이체 메모를 입력하세요."></textarea>
+          </label>
+          <button class="sb-primary-button" id="withdrawCompleteButton" type="submit">출금 완료 처리</button>
+        </form>
+      </section>
+    </div>
+
+    <div class="sb-modal" id="adminLogModal" hidden>
+      <div class="sb-modal-backdrop" data-close-admin-log-modal></div>
+      <section class="sb-modal-card sb-admin-log-modal-card" role="dialog" aria-modal="true" aria-labelledby="adminLogModalTitle">
+        <header class="sb-modal-header">
+          <div>
+            <p class="sb-eyebrow">ADMIN LOG DETAIL</p>
+            <h2 id="adminLogModalTitle">관리자 로그 상세</h2>
+          </div>
+          <button class="sb-icon-button" type="button" data-close-admin-log-modal aria-label="닫기">&times;</button>
+        </header>
+
+        <div class="sb-detail-grid sb-admin-log-detail-grid" id="adminLogDetailGrid"></div>
+
+        <div class="sb-admin-log-change-grid">
+          <section class="sb-admin-log-change-panel">
+            <h3 id="adminLogBeforeTitle">이전 상태</h3>
+            <div class="sb-admin-log-change-list" id="adminLogBeforeView"></div>
+          </section>
+          <section class="sb-admin-log-change-panel">
+            <h3 id="adminLogAfterTitle">변경 후 상태</h3>
+            <div class="sb-admin-log-change-list" id="adminLogAfterView"></div>
+          </section>
+        </div>
+
+        <details class="sb-admin-log-json-details" id="adminLogJsonDetails">
+          <summary>원본 JSON 보기</summary>
+          <div class="sb-admin-log-json-grid">
+            <section class="sb-modal-section">
+              <h4>before_data</h4>
+              <pre class="sb-json-block" id="adminLogBeforeData">-</pre>
+            </section>
+            <section class="sb-modal-section">
+              <h4>after_data</h4>
+              <pre class="sb-json-block" id="adminLogAfterData">-</pre>
+            </section>
+          </div>
+        </details>
+      </section>
+    </div>
+  </body>
+</html>

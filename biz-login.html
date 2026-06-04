@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SEUMBiz | 업체 로그인</title>
+    <meta name="description" content="SEUMBiz 업체 전용 로그인 화면" />
+    <link rel="stylesheet" href="/css/common.css" />
+    <link rel="stylesheet" href="/css/biz.css" />
+  </head>
+  <body class="biz-auth-body">
+    <main class="biz-auth-shell" aria-labelledby="loginTitle">
+      <section class="biz-auth-intro">
+        <a class="biz-auth-logo" href="/biz-login.html" aria-label="SEUMBiz 로그인">
+          <strong><span>SEUM</span><span>Biz</span></strong>
+          <small>업체 전용 운영 플랫폼</small>
+        </a>
+        <div class="biz-auth-copy">
+          <h1 class="biz-auth-headline">
+            매입 접수부터<br />
+            잔액·출금 관리까지<br />
+            한 화면에서 관리하세요.
+          </h1>
+          <p class="biz-auth-lead">
+            승인된 업체 계정으로 로그인하면<br />
+            매입 신청, 접수 내역, 업체 잔액 흐름을<br />
+            안전하게 확인할 수 있습니다.
+          </p>
+        </div>
+      </section>
+
+      <section class="biz-auth-card">
+        <div class="biz-auth-card-head">
+          <p>LOGIN</p>
+          <h2 id="loginTitle">업체 로그인</h2>
+          <span>승인된 업체 계정으로 로그인하세요.</span>
+        </div>
+
+        <form class="biz-auth-form biz-auth-form--login" id="bizLoginForm">
+          <label for="bizLoginId">이메일 <input id="bizLoginId" name="bizLoginId" type="email" autocomplete="username" placeholder="이메일을 입력해주세요" /></label>
+          <label for="bizLoginPassword">비밀번호 <input id="bizLoginPassword" name="bizLoginPassword" type="password" autocomplete="current-password" placeholder="비밀번호를 입력해주세요" /></label>
+          <p class="biz-auth-status" id="bizLoginStatus" role="status" aria-live="polite"></p>
+          <button class="biz-auth-submit" id="bizLoginSubmit" type="submit">로그인</button>
+        </form>
+
+        <p class="biz-auth-link">아직 계정이 없으신가요? <a href="/biz-signup.html">업체 등록 신청</a></p>
+      </section>
+    </main>
+    <script type="module" src="/js/biz-login.js"></script>
+  </body>
+</html>

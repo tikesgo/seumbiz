@@ -3,94 +3,130 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>세움비즈 | 등록/정산 이력</title>
-    <meta name="description" content="세움비즈 업체 전용 등록 및 정산 이력 화면" />
+    <title>SEUMBiz | 매입 내역</title>
+    <meta name="description" content="SEUMBiz 업체 전용 매입 접수 내역 화면" />
     <link rel="stylesheet" href="/css/common.css" />
     <link rel="stylesheet" href="/css/biz.css" />
   </head>
-  <body class="biz-body">
-    <header class="site-header biz-header">
-      <a class="site-brand" href="/biz-dashboard.html" aria-label="세움비즈 업체 대시보드 홈">
-        <img src="/assets/site-logo.png" alt="세움비즈 로고" />
-      </a>
-      <button class="mobile-menu-button" type="button" aria-controls="siteNav" aria-expanded="false" aria-label="메뉴 열기">☰</button>
-      <nav class="site-nav" id="siteNav" aria-label="업체 전용 메뉴">
-        <a href="/biz-dashboard.html">대시보드</a>
-        <a href="/biz-register.html">상품권등록</a>
-        <a href="/biz-points.html">포인트내역</a>
-        <a href="/biz-withdraw.html">정산신청</a>
-        <a href="/biz-history.html" aria-current="page">이용내역</a>
-        <a href="/support.html">고객센터</a>
-      </nav>
-    </header>
+  <body class="biz-portal-body">
+    <div class="biz-shell">
+      <aside class="biz-sidebar">
+        <a class="biz-sidebar-brand" href="biz-dashboard.html" aria-label="SEUMBiz 대시보드로 이동">
+          <strong><span>SEUM</span><span class="brand-accent">Biz</span></strong>
+          <span class="biz-brand-subtitle">업체 운영 플랫폼</span>
+        </a>
+        <nav class="biz-side-nav" aria-label="업체 포털 메뉴">
+          <a href="/biz-register.html"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 5h14v14H5z" /><path d="M8 9h8M8 13h5" /></svg></span>매입 신청</a>
+          <a href="/biz-history.html" aria-current="page"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 4h10M6 8h12v11H6z" /><path d="M9 12h6M9 16h4" /></svg></span>매입 내역</a>
+          <a href="/biz-points.html"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 18h16" /><path d="M7 15v-4M12 15V7M17 15v-6" /></svg></span>업체 잔액 내역</a>
+          <a href="/biz-withdraw.html"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9" /><path d="M12 7v6l4 2" /></svg></span>업체 잔액 출금</a>
+          <a href="/biz-profile.html"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" /><path d="M4 21a8 8 0 0 1 16 0" /></svg></span>내 정보 관리</a>
+        </nav>
+        <div class="biz-sidebar-support">
+          <strong>🎧 고객센터</strong>
+          <span>365일 24시간 상담 운영</span>
+          <span>010-8310-5150</span>
+        </div>
+        <button class="biz-sidebar-logout biz-logout-button" type="button" data-biz-logout>로그아웃</button>
+      </aside>
 
-    <main class="biz-page">
-      <section class="biz-hero" aria-labelledby="bizHistoryTitle">
-        <p class="biz-eyebrow">Activity History</p>
-        <h1 id="bizHistoryTitle">등록/정산 이력</h1>
-        <p>상품권 등록과 정산 신청 흐름을 함께 확인하는 통합 이력 화면입니다.</p>
-      </section>
+      <main class="biz-main">
+        <header class="biz-topbar">
+          <div class="biz-title-block">
+            <p class="biz-kicker">PURCHASE RECEIPTS</p>
+            <h1>매입 내역</h1>
+            <p>상품권 접수 묶음별 승인 상태와 예상 정산금을 확인합니다.</p>
+          </div>
+          <div class="biz-account is-loading" data-biz-account>
+            <div class="biz-user-chip" data-biz-user-chip><span class="biz-user-icon" aria-hidden="true" data-biz-user-initial></span><span data-biz-account-user-name></span><span data-biz-user-suffix></span></div>
+            <span class="biz-balance-chip" data-biz-balance-chip><span data-biz-balance-label></span><span data-biz-account-balance></span></span>
+          </div>
+        </header>
 
-      <section class="panel biz-section" aria-labelledby="historyTableTitle">
-        <div class="biz-section-head">
+        <section class="history-summary" aria-label="매입 접수 요약">
+          <article class="history-summary-card history-summary-card--primary"><span class="history-summary-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 4h7l3 3v13H7z" /><path d="M14 4v4h4" /><path d="M10 12h5M10 16h7" /></svg></span><div><span>이번 달 접수</span><strong>-</strong><small>불러오는 중</small></div></article>
+          <article class="history-summary-card"><span class="history-summary-icon history-summary-icon--green" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /><path d="M12 22a10 10 0 1 0-9.6-7.2" /></svg></span><div><span>승인 대기</span><strong>-</strong><small>불러오는 중</small></div></article>
+          <article class="history-summary-card"><span class="history-summary-icon history-summary-icon--gold" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 7h12l-2 10H8z" /><path d="M9 7V5a3 3 0 0 1 6 0v2" /><path d="M9 12h6" /></svg></span><div><span>예상 정산금</span><strong>-</strong><small>불러오는 중</small></div></article>
+          <article class="history-summary-card"><span class="history-summary-icon history-summary-icon--violet" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" /><path d="M5 21a7 7 0 0 1 14 0" /></svg></span><div><span>최근 승인</span><strong>-</strong><small>불러오는 중</small></div></article>
+        </section>
+
+        <div class="history-workspace">
+          <section class="history-panel" aria-labelledby="purchaseHistoryTitle">
+            <div class="history-panel-head">
+              <div>
+                <h2 id="purchaseHistoryTitle">매입 접수 목록</h2>
+                <p>리스트는 접수번호 단위로 표시됩니다.</p>
+              </div>
+            </div>
+            <div class="history-toolbar">
+              <div class="history-filter" aria-label="매입 내역 상태 필터"><span class="is-active">전체</span><span>접수대기</span><span>검수중</span><span>승인완료</span><span>반려</span><span>취소</span></div>
+              <div class="history-toolbar-actions">
+                <button class="history-outline-button" type="button"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3v4M17 3v4" /><path d="M4 7h16v13H4z" /><path d="M8 12h4" /></svg></span>기간 필터</button>
+                <button class="history-outline-button" type="button"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></svg></span>엑셀 다운로드</button>
+                <label class="history-search"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m21 21-4.3-4.3" /><path d="M10.8 18a7.2 7.2 0 1 1 0-14.4 7.2 7.2 0 0 1 0 14.4z" /></svg></span><input type="search" placeholder="접수번호, 상품권 종류 검색" /></label>
+              </div>
+            </div>
+            <div class="history-table-wrap">
+              <table class="history-table">
+                <caption>접수번호 기준 매입 내역</caption>
+                <thead><tr><th scope="col">접수번호</th><th scope="col">상품권 종류</th><th scope="col">건수</th><th scope="col">총 액면가</th><th scope="col">정산금</th><th scope="col">접수시간</th><th scope="col">상태</th></tr></thead>
+                <tbody>
+                <tr class="history-state-row history-state-row--loading"><td colspan="7">매입 내역을 불러오는 중입니다.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="history-pagination" aria-label="매입 내역 페이지 정보">
+              <span>전체 0건</span>
+              <strong>1</strong>
+              <span>2</span>
+              <span>3</span>
+              <span>4</span>
+              <span>5</span>
+            </div>
+          </section>
+
+        </div>
+      </main>
+    </div>
+
+    <div class="history-detail-modal" id="purchaseDetailModal" hidden>
+      <div class="history-detail-backdrop" data-detail-close></div>
+      <section class="history-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="purchaseDetailTitle">
+        <div class="history-detail-head">
           <div>
-            <h2 id="historyTableTitle">통합 이력</h2>
-            <p>승인대기, 승인완료, 반려, 정산중, 정산완료 상태 목업입니다.</p>
+            <p class="biz-kicker">PURCHASE DETAIL</p>
+            <h2 id="purchaseDetailTitle">매입 상세내역</h2>
+            <p>접수번호에 포함된 핀번호 목록을 확인합니다.</p>
+          </div>
+          <button class="history-detail-close" type="button" data-detail-close aria-label="상세내역 닫기">×</button>
+        </div>
+
+        <div class="history-detail-body">
+          <div class="history-detail-state" data-detail-state>상세내역을 불러오는 중입니다.</div>
+          <div class="history-detail-content" data-detail-content hidden>
+            <dl class="history-detail-info" data-detail-info></dl>
+
+            <div class="history-detail-table-wrap">
+              <table class="history-detail-table">
+                <caption>핀번호 상세 목록</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">No</th>
+                    <th scope="col">핀번호</th>
+                    <th scope="col">액면가</th>
+                    <th scope="col">상태</th>
+                    <th scope="col">검수 결과</th>
+                    <th scope="col">관리자 메모</th>
+                  </tr>
+                </thead>
+                <tbody data-detail-items></tbody>
+              </table>
+            </div>
           </div>
         </div>
-        <div class="biz-table-wrap">
-          <table class="biz-table">
-            <caption>상품권 등록 및 정산 통합 이력</caption>
-            <thead>
-              <tr>
-                <th scope="col">일자</th>
-                <th scope="col">구분</th>
-                <th scope="col">내용</th>
-                <th scope="col">금액</th>
-                <th scope="col">상태</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>2026.05.26</td>
-                <td>상품권 등록</td>
-                <td>신세계상품권 3매</td>
-                <td>3,000,000원</td>
-                <td><span class="biz-badge biz-badge--waiting">승인대기</span></td>
-              </tr>
-              <tr>
-                <td>2026.05.25</td>
-                <td>상품권 등록</td>
-                <td>롯데모바일상품권 4매</td>
-                <td>2,000,000원</td>
-                <td><span class="biz-badge biz-badge--approved">승인완료</span></td>
-              </tr>
-              <tr>
-                <td>2026.05.24</td>
-                <td>상품권 등록</td>
-                <td>문화상품권 1매</td>
-                <td>100,000원</td>
-                <td><span class="biz-badge biz-badge--rejected">반려</span></td>
-              </tr>
-              <tr>
-                <td>2026.05.23</td>
-                <td>정산 신청</td>
-                <td>업체 정산 요청</td>
-                <td>1,500,000원</td>
-                <td><span class="biz-badge biz-badge--settling">정산중</span></td>
-              </tr>
-              <tr>
-                <td>2026.05.22</td>
-                <td>정산 신청</td>
-                <td>업체 정산 완료</td>
-                <td>2,200,000원</td>
-                <td><span class="biz-badge biz-badge--done">정산완료</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
       </section>
-    </main>
-
+    </div>
+    <script type="module" src="/js/biz-auth.js"></script>
+    <script type="module" src="/js/biz-history.js"></script>
   </body>
 </html>

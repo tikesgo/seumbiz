@@ -4,172 +4,80 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="naver-site-verification" content="66024f45b147ff51a50a3d1c67ef3a52e34447c3" />
-    <title>세움비즈</title>
-    <meta name="description" content="세움비즈 상품권 접수 페이지" />
+    <title>SEUMBiz | 업체 운영 포털</title>
+    <meta name="description" content="SEUMBiz 업체 전용 운영 포털" />
+    <meta http-equiv="refresh" content="0; url=/biz-login.html" />
     <link rel="stylesheet" href="/css/common.css" />
-    <link rel="stylesheet" href="/css/index.css" />
-    <link rel="stylesheet" href="/css/main-banner.css" />
-    <link rel="stylesheet" href="/css/index-live-status.css" />
-    <link rel="stylesheet" href="/css/bank-selector.css" />
+    <link rel="stylesheet" href="/css/biz.css" />
+    <script>
+      window.location.replace("/biz-login.html");
+    </script>
   </head>
-  <body>
-    <header class="site-header">
-      <a class="site-brand" href="/" aria-label="세움비즈 홈">
-        <img data-site-logo alt="세움비즈 로고" />
-      </a>
-      <button class="mobile-menu-button" type="button" aria-controls="siteNav" aria-expanded="false" aria-label="메뉴 열기">☰</button>
-      <nav class="site-nav" id="siteNav" aria-label="주요 메뉴">
-        <a href="/index.html" aria-current="page">상품권교환신청</a>
-        <a href="/vendor.html">업체매입신청</a>
-        <a href="/status.html">실시간매입현황</a>
-        <a href="/support.html">공지사항</a>
-        <a href="/order.html">내주문조회</a>
-      </nav>
-    </header>
+  <body class="biz-portal-body">
+    <div class="biz-shell">
+      <aside class="biz-sidebar">
+        <a class="biz-sidebar-brand" href="biz-dashboard.html" aria-label="SEUMBiz 대시보드로 이동">
+          <strong><span>SEUM</span><span class="brand-accent">Biz</span></strong>
+          <span class="biz-brand-subtitle">업체 운영 플랫폼</span>
+        </a>
+        <nav class="biz-side-nav" aria-label="업체 포털 메뉴">
+          <a href="/biz-register.html"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 5h14v14H5z" /><path d="M8 9h8M8 13h5" /></svg></span>매입 신청</a>
+          <a href="/biz-history.html"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 4h10M6 8h12v11H6z" /><path d="M9 12h6M9 16h4" /></svg></span>매입 내역</a>
+          <a href="/biz-points.html"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 18h16" /><path d="M7 15v-4M12 15V7M17 15v-6" /></svg></span>업체 잔액 내역</a>
+          <a href="/biz-withdraw.html"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9" /><path d="M12 7v6l4 2" /></svg></span>업체 잔액 출금</a>
+          <a href="/biz-profile.html"><span class="biz-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" /><path d="M4 21a8 8 0 0 1 16 0" /></svg></span>내 정보 관리</a>
+        </nav>
+        <p class="biz-sidebar-foot">계좌정보는 사이트에 저장하지 않으며 출금 계좌 확인은 카카오톡 상담으로 진행합니다.</p>
+      </aside>
 
-    <main>
-      <section class="premium-hero" aria-labelledby="heroTitle">
-        <div class="premium-hero-copy">
-          <p class="premium-hero-kicker">24시간 운영 · 실시간 접수</p>
-          <h1 id="heroTitle"><span class="premium-hero-title-chunk">24시간 실시간</span> <span class="premium-hero-title-chunk">상품권 매입</span></h1>
-          <p class="premium-hero-lead">안전한 접수 · 빠른 처리</p>
-          <p class="premium-hero-description">접수부터 확인까지 간편하고 빠르게 진행됩니다.</p>
-          <div class="premium-hero-actions">
-            <a class="premium-hero-button premium-hero-button-primary" href="#exchangeSection">지금 바로 신청하기</a>
-            <a class="premium-hero-button premium-hero-button-secondary" href="/status.html">실시간 매입현황 보기</a>
+      <main class="biz-main">
+        <header class="biz-topbar">
+          <div class="biz-title-block">
+            <p class="biz-kicker">DASHBOARD</p>
+            <h1>업체 운영 포털</h1>
+            <p>매입 신청 현황과 업체 잔액을 한 화면에서 확인합니다.</p>
           </div>
-        </div>
-
-        <div class="premium-hero-board" aria-label="?? ??" hidden>
-          <section class="main-banner-slider" data-main-banner-slider hidden aria-label="메인 배너">
-            <div class="main-banner-track" data-main-banner-track></div>
-            <div class="main-banner-dots" data-main-banner-dots aria-hidden="true"></div>
-          </section>
-        </div>
-      </section>
-
-      <section class="exchange-layout" id="exchangeSection" aria-labelledby="exchangeTitle">
-        <div class="exchange-main">
-          <section class="panel product-panel">
-            <div class="section-heading">
-              <span class="section-heading-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false">
-                  <path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h11A2.5 2.5 0 0 1 20 8.5v1.2a2.3 2.3 0 0 0 0 4.6v1.2a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 15.5v-1.2a2.3 2.3 0 0 0 0-4.6V8.5Z" />
-                  <path d="M9 6v12" />
-                </svg>
-              </span>
-              <div>
-                <h2 id="exchangeTitle">상품권 선택</h2>
-                <p>상품권을 선택해주세요.</p>
-              </div>
-            </div>
-            <div id="giftCardList" class="gift-card-list" data-gift-list></div>
-          </section>
-          <section class="bulk-entry-panel" aria-labelledby="bulkEntryTitle">
-            <div>
-              <h2 id="bulkEntryTitle">10장 이상 대량매입이신가요?</h2>
-              <p>여러 장의 상품권을 한 번에 등록할 수 있습니다.</p>
-            </div>
-            <a href="/bulk.html">대량매입 신청하기</a>
-          </section>
-          <section class="panel detail-panel" data-detail-panel>
-            <div class="detail-empty">
-              <h2>상세 입력</h2>
-              <p>상품권을 선택하면 핀번호와 금액을 입력할 수 있습니다.</p>
-            </div>
-          </section>
-          <section class="panel index-live-status-panel" aria-live="polite">
-            <div class="index-live-status-head">
-              <div class="section-heading">
-                <span class="section-heading-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" focusable="false">
-                    <path d="M4 19h16" />
-                    <path d="M7 16v-5" />
-                    <path d="M12 16V7" />
-                    <path d="M17 16v-8" />
-                    <path d="m7 11 5-4 5 1" />
-                  </svg>
-                </span>
-                <div>
-                  <h2>실시간 매입현황</h2>
-                  <p>최근 접수된 처리 현황입니다.</p>
-                </div>
-              </div>
-              <a class="index-live-status-link" href="/status.html">전체보기</a>
-            </div>
-            <div class="index-live-status-column-head" aria-hidden="true">
-              <span>상품권</span>
-              <span>매입금액</span>
-              <span>고객명</span>
-              <span>처리상태</span>
-            </div>
-            <div class="index-live-status-list" data-index-live-status-list></div>
-          </section>
-        </div>
-
-        <aside class="panel account-panel">
-          <div class="section-heading">
-            <span class="section-heading-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" focusable="false">
-                <path d="M4 10h16" />
-                <path d="M6 10V8l6-3 6 3v2" />
-                <path d="M7 10v7" />
-                <path d="M12 10v7" />
-                <path d="M17 10v7" />
-                <path d="M5 17h14" />
-                <path d="M4 20h16" />
-              </svg>
-            </span>
-            <div>
-              <h2>고객 및 입금 계좌 정보</h2>
-              <p>입금받을 계좌와 연락처를 입력해주세요.</p>
-            </div>
+          <div class="biz-account is-loading" data-biz-account>
+            <div class="biz-user-chip" data-biz-user-chip><span class="biz-user-icon" aria-hidden="true" data-biz-user-initial></span><span data-biz-account-user-name></span><span data-biz-user-suffix></span></div>
+            <span class="biz-balance-chip" data-biz-balance-chip><span data-biz-balance-label></span><span data-biz-account-balance></span></span>
           </div>
+        </header>
 
-          <form class="customer-form" data-customer-form>
-            <label for="customerName">이름</label>
-            <input id="customerName" name="customerName" type="text" autocomplete="name" />
+        <section class="biz-summary-grid" aria-label="운영 요약">
+          <article class="biz-stat-card"><span>오늘 접수 금액</span><strong>8,420,000원</strong><small>접수번호 기준 합계</small></article>
+          <article class="biz-stat-card"><span>승인 대기</span><strong>12건</strong><small>관리자 검수 대기</small></article>
+          <article class="biz-stat-card"><span>업체 잔액</span><strong data-biz-balance>-</strong><small>원장 로그 기준</small></article>
+        </section>
 
-            <label for="customerPhone">연락처</label>
-            <input id="customerPhone" name="customerPhone" type="tel" inputmode="numeric" placeholder="010-0000-0000" autocomplete="tel" />
-
-            <label for="bankName">입금은행</label>
-            <div class="bank-selector" data-bank-selector></div>
-            <input id="bankName" name="bankName" type="hidden" autocomplete="off" />
-
-            <label for="accountNumber">계좌번호</label>
-            <input id="accountNumber" name="accountNumber" type="text" inputmode="numeric" autocomplete="off" />
-
-            <label for="accountHolder">예금주</label>
-            <input id="accountHolder" name="accountHolder" type="text" autocomplete="off" />
-
-            <div class="submit-message" data-submit-message hidden></div>
-            <button class="final-submit-button" type="submit" disabled>최종 신청</button>
-          </form>
-        </aside>
-      </section>
-    </main>
-
-    <div class="complete-modal" data-complete-modal hidden>
-      <div class="complete-modal-backdrop" data-complete-modal-close></div>
-      <article class="complete-modal-card" role="dialog" aria-modal="true" aria-labelledby="completeModalTitle">
-        <button class="complete-modal-close" type="button" data-complete-modal-close aria-label="닫기">×</button>
-        <strong id="completeModalTitle">접수가 완료되었습니다</strong>
-        <p class="complete-modal-receipt" data-complete-receipt>접수번호: -</p>
-        <p>진행상황은 내주문조회에서 확인할 수 있습니다.</p>
-        <div class="complete-modal-actions">
-          <a href="/order.html">내주문조회로 이동</a>
-          <a href="/status.html">실시간매입현황 보기</a>
-          <button type="button" data-copy-receipt>접수번호 복사</button>
-          <button type="button" data-complete-modal-close>닫기</button>
-        </div>
-      </article>
+        <section class="biz-section">
+          <div class="biz-section-head">
+            <div>
+              <h2>최근 매입 신청</h2>
+              <p>업체가 등록한 최근 매입 접수와 관리자 검수 상태입니다.</p>
+            </div>
+            <a class="biz-action-button" href="/biz-register.html">매입 신청</a>
+          </div>
+          <div class="biz-table-wrap">
+            <table class="biz-table">
+              <caption>최근 매입 신청 내역</caption>
+              <thead>
+                <tr>
+                  <th scope="col">접수일</th>
+                  <th scope="col">상품권 종류</th>
+                  <th scope="col">접수 금액</th>
+                  <th scope="col">건수</th>
+                  <th scope="col">상태</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>2026.05.26</td><td>신세계상품권</td><td>3,000,000원</td><td>3건</td><td><span class="biz-badge biz-badge--waiting">승인대기</span></td></tr>
+                <tr><td>2026.05.25</td><td>롯데 모바일교환권</td><td>2,000,000원</td><td>4건</td><td><span class="biz-badge biz-badge--approved">승인완료</span></td></tr>
+                <tr><td>2026.05.24</td><td>문화상품권</td><td>100,000원</td><td>1건</td><td><span class="biz-badge biz-badge--rejected">반려</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
     </div>
-
-    <script type="module" src="/js/common.js"></script>
-    <script type="module" src="/js/index.js"></script>
-    <script type="module" src="/js/main-banner.js"></script>
-    <script type="module" src="/js/index-live-status.js"></script>
-    <script type="module" src="/js/bank-selector.js"></script>
   </body>
 </html>
