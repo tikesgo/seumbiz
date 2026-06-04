@@ -4036,7 +4036,8 @@ function readMultipartFile(req, fieldName) {
         const nameMatch = header.match(/filename="([^"]*)"/);
         resolve({
           data: filePart.data,
-          name: nameMatch?.[1] || "attachment"
+          name: nameMatch?.[1] || "attachment",
+          mimeType: getImageMimeType(filePart.data)
         });
       } catch (error) {
         reject(error);
