@@ -72,7 +72,15 @@ const els = {
   adminEmail: document.querySelector("#adminEmail"),
   adminPassword: document.querySelector("#adminPassword"),
   adminName: document.querySelector("#adminName"),
+  changePasswordButton: document.querySelector("#changePasswordButton"),
   logoutButton: document.querySelector("#logoutButton"),
+  passwordChangeModal: document.querySelector("#passwordChangeModal"),
+  passwordChangeForm: document.querySelector("#passwordChangeForm"),
+  passwordChangeCurrent: document.querySelector("#passwordChangeCurrent"),
+  passwordChangeNew: document.querySelector("#passwordChangeNew"),
+  passwordChangeConfirm: document.querySelector("#passwordChangeConfirm"),
+  passwordChangeMessage: document.querySelector("#passwordChangeMessage"),
+  passwordChangeSubmitButton: document.querySelector("#passwordChangeSubmitButton"),
   refreshButton: document.querySelector("#refreshButton"),
   soundToggleButton: document.querySelector("#soundToggleButton"),
   soundTestButton: document.querySelector("#soundTestButton"),
@@ -230,6 +238,18 @@ init();
 
 function init() {
   els.loginForm.addEventListener("submit", handleLogin);
+  els.changePasswordButton?.addEventListener("click", openPasswordChangeModal);
+  els.passwordChangeForm?.addEventListener("submit", handlePasswordChangeSubmit);
+  els.passwordChangeModal?.addEventListener("click", (event) => {
+    if (event.target.closest("[data-close-password-modal]")) {
+      closePasswordChangeModal();
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && els.passwordChangeModal && !els.passwordChangeModal.hidden) {
+      closePasswordChangeModal();
+    }
+  });
   els.logoutButton.addEventListener("click", logout);
   els.refreshButton.addEventListener("click", refreshActiveView);
   els.soundToggleButton?.addEventListener("click", toggleSound);
@@ -3142,6 +3162,176 @@ function logout() {
   state.lastNotificationSnapshot = null;
   clearNavPendingBadges();
   showLogin();
+}
+
+function getAdminLoginEmail() {
+  return String(state.admin?.login_id || "").trim().toLowerCase();
+}
+
+function validateAdminPasswordChangeInput() {
+  const currentPassword = els.passwordChangeCurrent?.value || "";
+  const newPassword = els.passwordChangeNew?.value || "";
+  const confirmPassword = els.passwordChangeConfirm?.value || "";
+
+  if (!currentPassword) {
+    return "현재 비밀번호를 입력해주세요.";
+  }
+
+  if (!newPassword || !confirmPassword) {
+    return "새 비밀번호와 비밀번호 확인을 모두 입력해주세요.";
+  }
+
+  if (newPassword.length < 8) {
+    return "새 비밀번호는 8자 이상 입력해주세요.";
+  }
+
+  if (newPassword !== confirmPassword) {
+    return "새 비밀번호와 비밀번호 확인이 일치하지 않습니다.";
+  }
+
+  if (currentPassword === newPassword) {
+    return "현재 비밀번호와 다른 새 비밀번호를 입력해주세요.";
+  }
+
+  return "";
+}
+
+function mapAdminAuthErrorMessage(error, fallback) {
+  const message = String(error?.message || error || "").trim();
+  const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes("invalid login credentials") ||
+    normalized.includes("invalid email or password") ||
+    normalized.includes("invalid_grant")
+  ) {
+    return "현재 비밀번호가 올바르지 않습니다.";
+  }
+
+  if (normalized.includes("same password") || normalized.includes("should be different")) {
+    return "현재 비밀번호와 다른 새 비밀번호를 입력해주세요.";
+  }
+
+  if (normalized.includes("weak password") || normalized.includes("at least")) {
+    return "새 비밀번호는 8자 이상 입력해주세요.";
+  }
+
+  return message || fallback;
+}
+
+async function reauthenticateAdmin(email, password) {
+  const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: {
+      apikey: supabaseAnonKey,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({ email, password })
+  });
+  const data = await response.json();
+
+  if (!response.ok || !data.access_token) {
+    throw new Error(
+      mapAdminAuthErrorMessage(
+        { message: data.error_description || data.msg || data.message },
+        "현재 비밀번호 확인에 실패했습니다."
+      )
+    );
+  }
+
+  return data.access_token;
+}
+
+async function updateAdminPassword(accessToken, newPassword) {
+  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    method: "PUT",
+    headers: {
+      apikey: supabaseAnonKey,
+      Authorization: `Bearer ${accessToken}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({ password: newPassword })
+  });
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      mapAdminAuthErrorMessage(
+        { message: data.error_description || data.msg || data.message },
+        "비밀번호 변경에 실패했습니다."
+      )
+    );
+  }
+
+  return data;
+}
+
+function openPasswordChangeModal() {
+  if (!state.admin || !state.accessToken) {
+    setMessage(els.appMessage, "관리자 로그인 후 이용할 수 있습니다.", "error");
+    return;
+  }
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    setMessage(els.appMessage, "Supabase 관리자 설정이 필요합니다.", "error");
+    return;
+  }
+
+  els.passwordChangeForm?.reset();
+  clearMessage(els.passwordChangeMessage);
+  els.passwordChangeModal.hidden = false;
+  els.passwordChangeCurrent?.focus();
+}
+
+function closePasswordChangeModal() {
+  if (!els.passwordChangeModal) return;
+  els.passwordChangeModal.hidden = true;
+  els.passwordChangeForm?.reset();
+  clearMessage(els.passwordChangeMessage);
+}
+
+function setPasswordChangeSaving(isSaving) {
+  if (!els.passwordChangeSubmitButton) return;
+  els.passwordChangeSubmitButton.disabled = isSaving;
+  els.passwordChangeSubmitButton.textContent = isSaving ? "변경 중" : "비밀번호 변경";
+}
+
+async function handlePasswordChangeSubmit(event) {
+  event.preventDefault();
+  clearMessage(els.passwordChangeMessage);
+
+  const email = getAdminLoginEmail();
+  if (!email) {
+    setMessage(els.passwordChangeMessage, "관리자 이메일 정보를 확인할 수 없습니다.", "error");
+    return;
+  }
+
+  const validationError = validateAdminPasswordChangeInput();
+  if (validationError) {
+    setMessage(els.passwordChangeMessage, validationError, "error");
+    return;
+  }
+
+  const currentPassword = els.passwordChangeCurrent.value;
+  const newPassword = els.passwordChangeNew.value;
+
+  setPasswordChangeSaving(true);
+
+  try {
+    const reauthToken = await reauthenticateAdmin(email, currentPassword);
+    await updateAdminPassword(reauthToken, newPassword);
+    closePasswordChangeModal();
+    logout();
+    setMessage(els.loginMessage, "비밀번호가 변경되었습니다. 다시 로그인해 주세요.", "success");
+  } catch (error) {
+    setMessage(
+      els.passwordChangeMessage,
+      mapAdminAuthErrorMessage(error, "비밀번호 변경에 실패했습니다."),
+      "error"
+    );
+  } finally {
+    setPasswordChangeSaving(false);
+  }
 }
 
 function readSession() {

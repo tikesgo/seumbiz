@@ -79,6 +79,7 @@
               <span id="adminName">관리자</span>
               <button class="sb-outline-button sb-sound-toggle" id="soundToggleButton" type="button" aria-pressed="true">&#128276; &#49548;&#47532; &#53012;</button>
               <button class="sb-outline-button sb-sound-test" id="soundTestButton" type="button">&#9835; &#53580;&#49828;&#53944;</button>
+              <button class="sb-outline-button" id="changePasswordButton" type="button">비밀번호 변경</button>
               <button class="sb-outline-button" id="refreshButton" type="button">새로고침</button>
               <button class="sb-outline-button" id="logoutButton" type="button">로그아웃</button>
             </div>
@@ -939,6 +940,40 @@
             <textarea id="withdrawAdminMemo" placeholder="카카오톡 확인 및 수동 이체 메모를 입력하세요."></textarea>
           </label>
           <button class="sb-primary-button" id="withdrawCompleteButton" type="submit">출금 완료 처리</button>
+        </form>
+      </section>
+    </div>
+
+    <div class="sb-modal" id="passwordChangeModal" hidden>
+      <div class="sb-modal-backdrop" data-close-password-modal></div>
+      <section class="sb-modal-card sb-modal-card-small sb-password-modal-card" role="dialog" aria-modal="true" aria-labelledby="passwordChangeModalTitle">
+        <header class="sb-modal-header">
+          <div>
+            <p class="sb-eyebrow">ACCOUNT SECURITY</p>
+            <h2 id="passwordChangeModalTitle">비밀번호 변경</h2>
+            <p class="sb-password-modal-desc">로그인 중인 관리자 계정의 비밀번호만 변경할 수 있습니다.</p>
+          </div>
+          <button class="sb-icon-button" type="button" data-close-password-modal aria-label="닫기">&times;</button>
+        </header>
+
+        <form class="sb-approve-form sb-password-change-form" id="passwordChangeForm">
+          <label>
+            현재 비밀번호
+            <input id="passwordChangeCurrent" type="password" autocomplete="current-password" required />
+          </label>
+          <label>
+            새 비밀번호
+            <input id="passwordChangeNew" type="password" autocomplete="new-password" minlength="8" required />
+          </label>
+          <label>
+            새 비밀번호 확인
+            <input id="passwordChangeConfirm" type="password" autocomplete="new-password" minlength="8" required />
+          </label>
+          <p class="sb-message" id="passwordChangeMessage" role="status"></p>
+          <div class="sb-modal-actions sb-password-modal-actions">
+            <button class="sb-outline-button" type="button" data-close-password-modal>취소</button>
+            <button class="sb-primary-button" id="passwordChangeSubmitButton" type="submit">비밀번호 변경</button>
+          </div>
         </form>
       </section>
     </div>

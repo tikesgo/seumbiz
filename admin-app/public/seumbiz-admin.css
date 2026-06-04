@@ -1559,6 +1559,25 @@ tbody tr:hover {
   width: min(620px, calc(100vw - 56px));
 }
 
+.sb-password-modal-card .sb-password-modal-desc {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.sb-password-change-form {
+  gap: 14px;
+}
+
+.sb-password-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
 .sb-modal-header {
   display: flex;
   align-items: flex-start;
