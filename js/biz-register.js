@@ -61,7 +61,16 @@ const LOGIN_EXPIRED_MESSAGE = "\uB85C\uADF8\uC778\uC774 \uB9CC\uB8CC\uB418\uC5C8
 const AUTH_WAIT_MESSAGE = "\uB85C\uADF8\uC778 \uC815\uBCF4\uB97C \uD655\uC778\uD558\uB294 \uC911\uC785\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.";
 const OCR_AMOUNT_PENDING_STATUS = "\uAE08\uC561 \uBBF8\uD655\uC815";
 const OCR_UPLOAD_BATCH_SIZE = 2;
+const OCR_GROUP_SIZE = 5;
 const OCR_MAX_FILES = 10;
+
+const sliceOcrFileGroups = (files) => {
+  const groups = [];
+  for (let offset = 0; offset < files.length; offset += OCR_GROUP_SIZE) {
+    groups.push(files.slice(offset, offset + OCR_GROUP_SIZE));
+  }
+  return groups;
+};
 
 const OCR_ERROR_LABELS = {
   openai_error: { label: "OCR 서버 오류", className: "is-error" },
@@ -841,20 +850,26 @@ const handleRunOcr = async () => {
   setOcrStatus(totalFiles > 1 ? `${totalFiles}장 분석 중...` : "OCR 처리 중입니다.", "");
 
   try {
-    for (let offset = 0; offset < totalFiles; offset += OCR_UPLOAD_BATCH_SIZE) {
-      const chunk = files.slice(offset, offset + OCR_UPLOAD_BATCH_SIZE);
-      setOcrStatus(`OCR 처리 중입니다.\n${processedFiles}/${totalFiles} 처리 완료`, "");
+    const fileGroups = sliceOcrFileGroups(files);
 
-      const payload = await requestOcrBatch(chunk, session.access_token);
-      processedFiles += Number(payload.processedCount || chunk.length);
+    for (let groupIndex = 0; groupIndex < fileGroups.length; groupIndex += 1) {
+      const groupFiles = fileGroups[groupIndex];
 
-      if (payload.failures?.length) {
-        console.error("SEUMBiz OCR partial failures", payload.failures);
-        mergedFailures.push(...payload.failures);
+      for (let offset = 0; offset < groupFiles.length; offset += OCR_UPLOAD_BATCH_SIZE) {
+        const chunk = groupFiles.slice(offset, offset + OCR_UPLOAD_BATCH_SIZE);
+        setOcrStatus(`OCR 처리 중입니다.\n${processedFiles}/${totalFiles} 처리 완료`, "");
+
+        const payload = await requestOcrBatch(chunk, session.access_token);
+        processedFiles += Number(payload.processedCount || chunk.length);
+
+        if (payload.failures?.length) {
+          console.error("SEUMBiz OCR partial failures", payload.failures);
+          mergedFailures.push(...payload.failures);
+        }
+
+        mergedItems.push(...(payload.items || []));
+        setOcrStatus(`OCR 처리 중입니다.\n${Math.min(processedFiles, totalFiles)}/${totalFiles} 처리 완료`, "");
       }
-
-      mergedItems.push(...(payload.items || []));
-      setOcrStatus(`OCR 처리 중입니다.\n${Math.min(processedFiles, totalFiles)}/${totalFiles} 처리 완료`, "");
     }
 
     const newReviewItems = normalizeOcrResponseItems(mergedItems, giftType);
