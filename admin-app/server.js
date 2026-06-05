@@ -18,7 +18,9 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const adminPassword = process.env.ADMIN_PASSWORD || "";
 const openAiApiKey = process.env.OPENAI_API_KEY || "";
 const openAiOcrModel = process.env.OPENAI_OCR_MODEL || "gpt-4o-mini";
-const OCR_CONCURRENCY = 3;
+const OCR_CONCURRENCY = 2;
+const OCR_RATE_LIMIT_RETRY_DELAY_MS = 2000;
+const OCR_RATE_LIMIT_MAX_ATTEMPTS = 2;
 const telegramBotToken = process.env.TELEGRAM_BOT_TOKEN || "";
 const telegramChatId = process.env.TELEGRAM_CHAT_ID || "";
 const statusValues = new Set(["\uC2B9\uC778", "\uB300\uAE30", "\uCDE8\uC18C"]);
@@ -1702,7 +1704,9 @@ async function handleSeumBizOcrGiftcard(req, res) {
       });
     }
 
-    const fileResults = await mapWithConcurrency(files, OCR_CONCURRENCY, (file) => processOcrGiftcardFile(file));
+    const fileResults = await mapWithConcurrency(files, OCR_CONCURRENCY, (file, fileIndex) =>
+      processOcrGiftcardFile(file, fileIndex)
+    );
 
     const items = [];
     const failures = [];
@@ -1757,7 +1761,7 @@ async function mapWithConcurrency(items, concurrency, worker) {
   return results;
 }
 
-async function processOcrGiftcardFile(file) {
+async function processOcrGiftcardFile(file, fileIndex = 0) {
   const fileStartedAt = Date.now();
   const imageName = file.name || "unknown";
 
@@ -1789,7 +1793,7 @@ async function processOcrGiftcardFile(file) {
   }
 
   try {
-    const result = await callOpenAiGiftcardOcr(file);
+    const result = await callOpenAiGiftcardOcrWithRetry(file, fileIndex);
     const resultItems = Array.isArray(result?.items) ? result.items : [];
     const normalizedItems = [];
 
@@ -1847,11 +1851,91 @@ async function processOcrGiftcardFile(file) {
       failure: {
         image_name: imageName,
         message,
-        error_type: "openai_error"
+        error_type: item.error_type || "openai_error"
       },
       fileFailed: true
     };
   }
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isOpenAiRateLimitError(message, httpStatus) {
+  const status = Number(httpStatus);
+  if (status === 429) return true;
+
+  const text = String(message || "").toLowerCase();
+  return (
+    text.includes("rate limit") ||
+    text.includes("rate_limit") ||
+    text.includes("openai_rate_limit") ||
+    text.includes("too many requests") ||
+    text.includes("429")
+  );
+}
+
+function getOpenAiErrorHttpStatus(error) {
+  const status = Number(error?.httpStatus);
+  if (Number.isFinite(status) && status > 0) return status;
+
+  const match = String(error?.message || "").match(/openai http (\d{3})/i);
+  if (match) return Number(match[1]);
+
+  return null;
+}
+
+async function callOpenAiGiftcardOcrWithRetry(file, fileIndex = 0) {
+  const imageName = file.name || "unknown";
+
+  for (let attempt = 1; attempt <= OCR_RATE_LIMIT_MAX_ATTEMPTS; attempt += 1) {
+    const attemptStartedAt = Date.now();
+
+    try {
+      const result = await callOpenAiGiftcardOcr(file);
+      if (attempt > 1) {
+        console.log("[SEUMBiz OCR] OpenAI retry result", {
+          fileIndex,
+          imageName,
+          success: true,
+          httpStatus: 200,
+          elapsedMs: Date.now() - attemptStartedAt
+        });
+      }
+      return result;
+    } catch (error) {
+      const message = String(error?.message || error);
+      const httpStatus = getOpenAiErrorHttpStatus(error);
+      const rateLimit = isOpenAiRateLimitError(message, httpStatus);
+      const isLastAttempt = attempt >= OCR_RATE_LIMIT_MAX_ATTEMPTS;
+
+      if (attempt > 1) {
+        console.log("[SEUMBiz OCR] OpenAI retry result", {
+          fileIndex,
+          imageName,
+          success: false,
+          httpStatus: httpStatus ?? "unknown",
+          elapsedMs: Date.now() - attemptStartedAt
+        });
+      }
+
+      if (!rateLimit || isLastAttempt) {
+        throw error;
+      }
+
+      console.log("[SEUMBiz OCR] OpenAI retry scheduled", {
+        fileIndex,
+        imageName,
+        reason: "openai_rate_limit",
+        delayMs: OCR_RATE_LIMIT_RETRY_DELAY_MS,
+        attempt: attempt + 1
+      });
+      await sleep(OCR_RATE_LIMIT_RETRY_DELAY_MS);
+    }
+  }
+
+  throw new Error("OpenAI OCR retry attempts exhausted.");
 }
 
 function maskPinForOcrLog(pin) {
@@ -2261,7 +2345,9 @@ async function callOpenAiGiftcardOcr(file) {
       httpStatus: response.status,
       message: truncateOcrLogMessage(message)
     });
-    throw new Error(message || `OpenAI HTTP ${response.status}`);
+    const error = new Error(message || `OpenAI HTTP ${response.status}`);
+    error.httpStatus = response.status;
+    throw error;
   }
 
   const data = await response.json();
