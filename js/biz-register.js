@@ -60,9 +60,11 @@ let isAuthReady = Boolean(window.SEUMBizAuth?.companyId);
 const LOGIN_EXPIRED_MESSAGE = "\uB85C\uADF8\uC778\uC774 \uB9CC\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uB2E4\uC2DC \uB85C\uADF8\uC778\uD574\uC8FC\uC138\uC694.";
 const AUTH_WAIT_MESSAGE = "\uB85C\uADF8\uC778 \uC815\uBCF4\uB97C \uD655\uC778\uD558\uB294 \uC911\uC785\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.";
 const OCR_AMOUNT_PENDING_STATUS = "\uAE08\uC561 \uBBF8\uD655\uC815";
+const OCR_BARCODE_FAST_PATH_ENABLED = true;
 const OCR_UPLOAD_BATCH_SIZE = 2;
 const OCR_GROUP_SIZE = 5;
 const OCR_MAX_FILES = 10;
+const BARCODE_DECODE_PATHS = new Set(["barcode_detector", "barcode_zxing"]);
 
 const sliceOcrFileGroups = (files) => {
   const groups = [];
@@ -78,7 +80,9 @@ const OCR_ERROR_LABELS = {
   invalid_file: { label: "이미지 형식 오류", className: "is-error" },
   pin_not_found: { label: "PIN 미검출", className: "is-error" },
   pin_format: { label: "형식 오류", className: "is-error" },
-  amount_missing: { label: "금액 미확정", className: "is-warning" },
+  // OCR 패스트패스/보조 OCR의 최우선 목적은 PIN 16자리 추출입니다.
+  // face_value는 관리자 승인 단계에서 확정되므로, 카드 UI에서는 금액 문구를 최소화합니다.
+  amount_missing: { label: "PIN 추출 완료", className: "is-ready" },
 };
 
 const escapeHtml = (value) =>
@@ -619,7 +623,18 @@ const getOcrReviewStatus = (item) => {
   return { label: "정상", className: "is-ready" };
 };
 
+const isBarcodeDecodePath = (decodePath) => BARCODE_DECODE_PATHS.has(String(decodePath || "").trim());
+
 const getOcrReviewMetaMessage = (item, confidence) => {
+  if (
+    OCR_BARCODE_FAST_PATH_ENABLED &&
+    isBarcodeDecodePath(item.decode_path) &&
+    isValidPin(normalizePin(item.pin_no)) &&
+    !item.face_value
+  ) {
+    return "바코드에서 PIN 추출 완료";
+  }
+
   const errorType = String(item.error_type || "").trim();
   const userMessage = getOcrUserMessage(errorType, item);
   if (userMessage) return userMessage;
@@ -651,7 +666,7 @@ const getOcrUserMessage = (errorType, item) => {
     case "pin_format":
       return "16자리 PIN 번호를 확인해 주세요.";
     case "amount_missing":
-      return "금액 미확정. 관리자 승인 시 입력 가능합니다.";
+      return "PIN 추출 완료. 관리자 검수 후 확정됩니다.";
     default:
       return "";
   }
@@ -679,7 +694,16 @@ const renderOcrReviewItems = () => {
   if (clearOcrResultsButton) clearOcrResultsButton.hidden = false;
   if (ocrReviewSummary) {
     ocrReviewSummary.hidden = false;
-    ocrReviewSummary.textContent = `OCR 결과 ${ocrReviewItems.length.toLocaleString("ko-KR")}건`;
+    if (OCR_BARCODE_FAST_PATH_ENABLED) {
+      const barcodeCount = ocrReviewItems.filter((item) => isBarcodeDecodePath(item.decode_path)).length;
+      const serverCount = ocrReviewItems.length - barcodeCount;
+      ocrReviewSummary.textContent =
+        barcodeCount > 0
+          ? `PIN 추출 결과 ${ocrReviewItems.length.toLocaleString("ko-KR")}건 (바코드 ${barcodeCount.toLocaleString("ko-KR")} · 보조 OCR ${serverCount.toLocaleString("ko-KR")})`
+          : `PIN 추출 결과 ${ocrReviewItems.length.toLocaleString("ko-KR")}건`;
+    } else {
+      ocrReviewSummary.textContent = `OCR 결과 ${ocrReviewItems.length.toLocaleString("ko-KR")}건`;
+    }
   }
   ocrReviewList.innerHTML = ocrReviewItems
     .map((item, index) => {
@@ -737,6 +761,8 @@ const normalizeOcrResponseItems = (items, giftType) =>
     raw_text: item.raw_text || "",
     failed: Boolean(item.failed),
     error_type: item.error_type || "",
+    decode_path: item.decode_path || "",
+    barcode_elapsed_ms: item.barcode_elapsed_ms ?? null,
     giftcard_code: giftType.code,
     giftcard_type: giftType.label,
     giftcard_logo_url: giftType.logo_url,
@@ -758,6 +784,12 @@ const getOcrResultMessage = (summary) => {
   const itemCount = Number(summary?.itemCount || 0);
   const elapsedMs = Number(summary?.elapsedMs || 0);
   const elapsedLabel = elapsedMs > 0 ? ` (${(elapsedMs / 1000).toFixed(1)}초)` : "";
+  const barcodeCount = Number(summary?.barcodeCount || 0);
+  const serverOcrCount = Number(summary?.serverOcrCount || 0);
+  const barcodePrefix =
+    OCR_BARCODE_FAST_PATH_ENABLED && (barcodeCount > 0 || serverOcrCount > 0)
+      ? `바코드 ${barcodeCount.toLocaleString("ko-KR")}건 · 보조 OCR ${serverOcrCount.toLocaleString("ko-KR")}건 · `
+      : "";
 
   if (!itemCount && !processedCount) {
     return failureCount
@@ -766,14 +798,85 @@ const getOcrResultMessage = (summary) => {
   }
 
   if (failureCount && successCount) {
-    return `성공 ${successCount.toLocaleString("ko-KR")}건 · 실패 ${failureCount.toLocaleString("ko-KR")}건${elapsedLabel}. 실패 이미지는 아래 카드에서 사유를 확인해주세요.`;
+    return `${barcodePrefix}PIN 추출 성공 ${successCount.toLocaleString("ko-KR")}건 · PIN 추출 실패 ${failureCount.toLocaleString("ko-KR")}건${elapsedLabel}. 실패 이미지는 아래 카드에서 사유를 확인해주세요.`;
   }
 
   if (failureCount) {
-    return `실패 ${failureCount.toLocaleString("ko-KR")}건${elapsedLabel}. 실패 이미지는 아래 카드에서 사유를 확인해주세요.`;
+    return `${barcodePrefix}PIN 추출 실패 ${failureCount.toLocaleString("ko-KR")}건${elapsedLabel}. 실패 이미지는 아래 카드에서 사유를 확인해주세요.`;
   }
 
-  return `성공 ${successCount.toLocaleString("ko-KR")}건${elapsedLabel}. OCR 결과를 확인하고 필요한 부분을 수정해주세요.`;
+  if (OCR_BARCODE_FAST_PATH_ENABLED && barcodeCount > 0 && serverOcrCount === 0) {
+    return `PIN ${barcodeCount.toLocaleString("ko-KR")}건 추출 완료${elapsedLabel}.`;
+  }
+
+  return `${barcodePrefix}PIN ${successCount.toLocaleString("ko-KR")}건 추출 완료${elapsedLabel}. 카드에서 PIN을 확인해주세요.`;
+};
+
+const mergeOcrResultsInFileOrder = (files, barcodeItems, serverItems) => {
+  const serverMap = new Map((serverItems || []).map((item) => [item.image_name, item]));
+  const barcodeMap = new Map((barcodeItems || []).map((item) => [item.image_name, item]));
+  const merged = [];
+
+  for (const file of files) {
+    const imageName = file.name;
+    const serverItem = serverMap.get(imageName);
+    const barcodeItem = barcodeMap.get(imageName);
+    const serverPinValid = serverItem ? isValidPin(normalizePin(serverItem.pin_no)) : false;
+    const barcodePinValid = barcodeItem ? isValidPin(normalizePin(barcodeItem.pin_no)) : false;
+
+    if (serverPinValid) {
+      merged.push(serverItem);
+    } else if (barcodePinValid) {
+      merged.push(barcodeItem);
+    } else if (serverItem) {
+      merged.push(serverItem);
+    } else if (barcodeItem) {
+      merged.push(barcodeItem);
+    }
+  }
+
+  return merged;
+};
+
+const runServerOcrBatches = async (files, accessToken, options = {}) => {
+  const totalFiles = Number(options.totalFiles || files.length);
+  let processedFiles = Number(options.processedOffset || 0);
+  const mergedItems = [];
+  const mergedFailures = [];
+  const statusPrefix = String(options.statusPrefix || "");
+  const fileGroups = sliceOcrFileGroups(files);
+
+  for (let groupIndex = 0; groupIndex < fileGroups.length; groupIndex += 1) {
+    const groupFiles = fileGroups[groupIndex];
+
+    for (let offset = 0; offset < groupFiles.length; offset += OCR_UPLOAD_BATCH_SIZE) {
+      const chunk = groupFiles.slice(offset, offset + OCR_UPLOAD_BATCH_SIZE);
+      const progressLine = `${processedFiles}/${totalFiles} 처리 완료`;
+      setOcrStatus(
+        statusPrefix
+          ? `${statusPrefix}\n${progressLine}`
+          : totalFiles > 1
+            ? `OCR 처리 중입니다.\n${progressLine}`
+            : "OCR 처리 중입니다.",
+      );
+
+      const payload = await requestOcrBatch(chunk, accessToken);
+      processedFiles += Number(payload.processedCount || chunk.length);
+
+      if (payload.failures?.length) {
+        console.error("SEUMBiz OCR partial failures", payload.failures);
+        mergedFailures.push(...payload.failures);
+      }
+
+      mergedItems.push(...(payload.items || []));
+      const doneLine = `${Math.min(processedFiles, totalFiles)}/${totalFiles} 처리 완료`;
+      setOcrStatus(
+        statusPrefix ? `${statusPrefix}\n${doneLine}` : `OCR 처리 중입니다.\n${doneLine}`,
+      );
+    }
+  }
+
+  return { mergedItems, mergedFailures, processedFiles };
 };
 
 const requestOcrBatch = async (files, accessToken) => {
@@ -822,6 +925,28 @@ const notifyPurchaseRequestTelegram = async (row) => {
   }
 };
 
+const finalizeOcrRun = (mergedItems, giftType, startedAt, summaryExtras = {}) => {
+  const newReviewItems = normalizeOcrResponseItems(mergedItems, giftType);
+  ocrReviewItems = [...ocrReviewItems, ...newReviewItems];
+  renderOcrReviewItems();
+
+  const outcome = countOcrReviewOutcome(newReviewItems);
+  const summary = {
+    processedCount: summaryExtras.processedCount ?? newReviewItems.length,
+    successCount: outcome.successCount,
+    failureCount: outcome.failureCount,
+    itemCount: newReviewItems.length,
+    elapsedMs: Date.now() - startedAt,
+    barcodeCount: summaryExtras.barcodeCount ?? 0,
+    serverOcrCount: summaryExtras.serverOcrCount ?? 0,
+  };
+  const hasReadyItems = newReviewItems.some((item) => isValidPin(item.pin_no));
+  setOcrStatus(
+    getOcrResultMessage(summary),
+    summary.failureCount && !hasReadyItems ? "error" : summary.failureCount ? "" : "ok",
+  );
+};
+
 const handleRunOcr = async () => {
   if (isOcrRunning) return;
 
@@ -843,52 +968,67 @@ const handleRunOcr = async () => {
   setOcrRunning(true);
   const totalFiles = files.length;
   const startedAt = Date.now();
-  let processedFiles = 0;
-  const mergedItems = [];
-  const mergedFailures = [];
 
   setOcrStatus(totalFiles > 1 ? `${totalFiles}장 분석 중...` : "OCR 처리 중입니다.", "");
 
   try {
-    const fileGroups = sliceOcrFileGroups(files);
+    if (!OCR_BARCODE_FAST_PATH_ENABLED) {
+      const { mergedItems } = await runServerOcrBatches(files, session.access_token, { totalFiles });
+      finalizeOcrRun(mergedItems, giftType, startedAt, {
+        processedCount: totalFiles,
+        barcodeCount: 0,
+        serverOcrCount: totalFiles,
+      });
+      return;
+    }
 
-    for (let groupIndex = 0; groupIndex < fileGroups.length; groupIndex += 1) {
-      const groupFiles = fileGroups[groupIndex];
+    const { scanBarcodeFromFiles, scanResultToOcrItem } = await import("./ocr-barcode-scan.js");
+    let barcodeScanned = 0;
 
-      for (let offset = 0; offset < groupFiles.length; offset += OCR_UPLOAD_BATCH_SIZE) {
-        const chunk = groupFiles.slice(offset, offset + OCR_UPLOAD_BATCH_SIZE);
-        setOcrStatus(`OCR 처리 중입니다.\n${processedFiles}/${totalFiles} 처리 완료`, "");
+    setOcrStatus(`바코드 스캔 중...\n0/${totalFiles}`);
+    const barcodeScanMap = await scanBarcodeFromFiles(files, {
+      onProgress: ({ completed, total }) => {
+        barcodeScanned = completed;
+        setOcrStatus(`바코드 스캔 중...\n${completed}/${total}`);
+      },
+    });
 
-        const payload = await requestOcrBatch(chunk, session.access_token);
-        processedFiles += Number(payload.processedCount || chunk.length);
+    const barcodeItems = [];
+    const serverTargetFiles = [];
 
-        if (payload.failures?.length) {
-          console.error("SEUMBiz OCR partial failures", payload.failures);
-          mergedFailures.push(...payload.failures);
-        }
-
-        mergedItems.push(...(payload.items || []));
-        setOcrStatus(`OCR 처리 중입니다.\n${Math.min(processedFiles, totalFiles)}/${totalFiles} 처리 완료`, "");
+    for (const file of files) {
+      const scanResult = barcodeScanMap.get(file);
+      const ocrItem = scanResult ? scanResultToOcrItem(file, scanResult) : null;
+      if (ocrItem) {
+        barcodeItems.push(ocrItem);
+      } else {
+        serverTargetFiles.push(file);
       }
     }
 
-    const newReviewItems = normalizeOcrResponseItems(mergedItems, giftType);
-    ocrReviewItems = [...ocrReviewItems, ...newReviewItems];
-    renderOcrReviewItems();
+    console.log("[SEUMBiz OCR Barcode Fast-Path]", {
+      totalFiles,
+      barcodeSuccessCount: barcodeItems.length,
+      serverTargetCount: serverTargetFiles.length,
+      barcodeScanned,
+    });
 
-    const outcome = countOcrReviewOutcome(newReviewItems);
-    const summary = {
+    let serverItems = [];
+    if (serverTargetFiles.length) {
+      const statusPrefix = `바코드 ${barcodeItems.length}건 · OCR 처리 중`;
+      const { mergedItems } = await runServerOcrBatches(serverTargetFiles, session.access_token, {
+        totalFiles: serverTargetFiles.length,
+        statusPrefix,
+      });
+      serverItems = mergedItems;
+    }
+
+    const mergedItems = mergeOcrResultsInFileOrder(files, barcodeItems, serverItems);
+    finalizeOcrRun(mergedItems, giftType, startedAt, {
       processedCount: totalFiles,
-      successCount: outcome.successCount,
-      failureCount: outcome.failureCount,
-      itemCount: newReviewItems.length,
-      elapsedMs: Date.now() - startedAt,
-    };
-    const hasReadyItems = newReviewItems.some((item) => isValidPin(item.pin_no));
-    setOcrStatus(
-      getOcrResultMessage(summary),
-      summary.failureCount && !hasReadyItems ? "error" : summary.failureCount ? "" : "ok",
-    );
+      barcodeCount: barcodeItems.length,
+      serverOcrCount: serverTargetFiles.length,
+    });
   } catch (batchError) {
     console.error("SEUMBiz OCR failed", batchError);
     setOcrStatus(`OCR 처리에 실패했습니다. ${batchError.message || "기존 등록 예정 목록은 유지됩니다."}`, "error");
