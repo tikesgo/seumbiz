@@ -51,6 +51,10 @@ const ocrReviewSummary = $("#ocrReviewSummary");
 const ocrStatus = $("#ocrStatus");
 const ocrPanel = document.querySelector('[data-register-panel="ocr"]');
 const ocrDropzone = document.querySelector("[data-ocr-dropzone]");
+const ocrImagePreview = $("#ocrImagePreview");
+const ocrImagePreviewGrid = $("#ocrImagePreviewGrid");
+const ocrImagePreviewCount = $("#ocrImagePreviewCount");
+const clearOcrImagesButton = $("#clearOcrImagesButton");
 
 let selectedFaceValue = null;
 let giftcards = [];
@@ -74,6 +78,7 @@ const OCR_MAX_TOTAL_BYTES = 50 * 1024 * 1024;
 const BARCODE_DECODE_PATHS = new Set(["barcode_detector", "barcode_zxing"]);
 
 let ocrPasteSequence = 0;
+const ocrImagePreviewUrls = [];
 
 const sliceOcrFileGroups = (files) => {
   const groups = [];
@@ -565,6 +570,11 @@ const setOcrRunning = (isRunning) => {
     runOcrButton.disabled = isRunning;
     runOcrButton.textContent = isRunning ? "OCR 등록 중..." : "OCR로 등록";
   }
+  if (clearOcrImagesButton) {
+    clearOcrImagesButton.disabled = isRunning;
+  }
+  ocrDropzone?.classList.toggle("is-disabled", isRunning);
+  renderOcrImagePreview();
 };
 
 const getOcrFiles = () => Array.from(ocrInput?.files || []);
@@ -609,12 +619,87 @@ const resetOcrReviewOnFileChange = () => {
   renderOcrReviewItems();
 };
 
+const revokeOcrImagePreviewUrls = () => {
+  ocrImagePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+  ocrImagePreviewUrls.length = 0;
+};
+
+const isPasteOcrFile = (file) => /^paste-/i.test(String(file?.name || ""));
+
+const getOcrImageLabel = (file, index, files) => {
+  if (isPasteOcrFile(file)) {
+    const pasteIndex = files.slice(0, index + 1).filter((item) => isPasteOcrFile(item)).length;
+    return `붙여넣기 이미지 ${pasteIndex}`;
+  }
+  return file.name || `이미지 ${index + 1}`;
+};
+
+const renderOcrImagePreview = () => {
+  if (!ocrImagePreview || !ocrImagePreviewGrid || !ocrImagePreviewCount) return;
+
+  revokeOcrImagePreviewUrls();
+
+  const files = getOcrFiles();
+  ocrImagePreviewCount.textContent = `총 ${files.length}/${OCR_MAX_FILES}장`;
+
+  if (!files.length) {
+    ocrImagePreview.hidden = true;
+    ocrImagePreviewGrid.innerHTML = "";
+    if (clearOcrImagesButton) clearOcrImagesButton.disabled = isOcrRunning;
+    return;
+  }
+
+  ocrImagePreview.hidden = false;
+  if (clearOcrImagesButton) clearOcrImagesButton.disabled = isOcrRunning;
+
+  ocrImagePreviewGrid.innerHTML = files
+    .map((file, index) => {
+      const previewUrl = URL.createObjectURL(file);
+      ocrImagePreviewUrls.push(previewUrl);
+      const label = getOcrImageLabel(file, index, files);
+      const removeDisabled = isOcrRunning ? "disabled" : "";
+      return `
+        <article class="ocr-image-preview-card">
+          <button
+            class="ocr-image-preview-remove-button"
+            type="button"
+            data-ocr-image-remove="${index}"
+            aria-label="${escapeHtml(label)} 삭제"
+            ${removeDisabled}
+          >×</button>
+          <div class="ocr-image-preview-thumb">
+            <img src="${previewUrl}" alt="" loading="lazy" />
+          </div>
+          <p class="ocr-image-preview-label" title="${escapeHtml(label)}">${escapeHtml(label)}</p>
+        </article>
+      `;
+    })
+    .join("");
+};
+
+const removeOcrImageAt = (index) => {
+  if (isOcrRunning) return;
+  const files = getOcrFiles();
+  if (!Number.isInteger(index) || index < 0 || index >= files.length) return;
+
+  const remaining = files.filter((_, fileIndex) => fileIndex !== index);
+  setOcrInputFiles(remaining);
+  syncOcrInputChange();
+};
+
+const clearOcrImages = () => {
+  if (isOcrRunning) return;
+  setOcrInputFiles([]);
+  syncOcrInputChange();
+};
+
 const syncOcrInputChange = (options = {}) => {
   const files = getOcrFiles();
   resetOcrReviewOnFileChange();
 
   if (files.length > OCR_MAX_FILES) {
     setOcrStatus("OCR 이미지는 최대 10장까지 등록할 수 있습니다.", "error");
+    renderOcrImagePreview();
     return { ok: false, files };
   }
 
@@ -623,10 +708,12 @@ const syncOcrInputChange = (options = {}) => {
       `붙여넣기 이미지 ${options.pasteAdded.toLocaleString("ko-KR")}장이 추가되었습니다. 총 ${files.length}/${OCR_MAX_FILES}장`,
       "ok",
     );
+    renderOcrImagePreview();
     return { ok: true, files };
   }
 
   setOcrStatus(files.length ? `${files.length.toLocaleString("ko-KR")}개 이미지가 선택되었습니다.` : "", "");
+  renderOcrImagePreview();
   return { ok: true, files };
 };
 
@@ -1455,6 +1542,12 @@ ocrReviewList?.addEventListener("click", (event) => {
 ocrInput?.addEventListener("change", () => {
   syncOcrInputChange();
 });
+ocrImagePreviewGrid?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-ocr-image-remove]");
+  if (!button || button.disabled) return;
+  removeOcrImageAt(Number(button.dataset.ocrImageRemove));
+});
+clearOcrImagesButton?.addEventListener("click", clearOcrImages);
 ocrDropzone?.addEventListener("click", () => {
   if (!isOcrTabActive() || isOcrRunning) return;
   ocrInput?.click();
