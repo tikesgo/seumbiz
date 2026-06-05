@@ -97,13 +97,14 @@
                   <h2 id="imageUploadTitle">OCR 등록</h2>
                   <p>상품권 이미지를 올려 OCR 결과를 확인한 뒤 등록 예정 목록에 추가합니다.</p>
                 </div>
-                <label class="ocr-dropzone" for="giftCardImage">
-                  <input id="giftCardImage" name="giftCardImage" type="file" accept="image/png,image/jpeg,image/jpg,image/webp,.png,.jpg,.jpeg,.webp" multiple />
+                <div class="ocr-dropzone" data-ocr-dropzone>
+                  <input id="giftCardImage" name="giftCardImage" type="file" accept="image/png,image/jpeg,image/jpg,image/webp,.png,.jpg,.jpeg,.webp" multiple tabindex="-1" aria-hidden="true" />
                   <span class="ocr-image-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M10 36h28a4 4 0 0 0 4-4V16a4 4 0 0 0-4-4H10a4 4 0 0 0-4 4v16a4 4 0 0 0 4 4z" /><path d="m14 31 8-8 6 6 4-4 6 6" /><path d="M31 19h.01" /></svg></span>
                   <strong>상품권 이미지를 클릭해서 업로드하거나 드래그 앤 드롭 해주세요.</strong>
+                  <em>캡처한 바코드 이미지는 Ctrl+V로 바로 붙여넣을 수 있습니다.</em>
                   <em>한 번에 최대 10장까지 등록할 수 있습니다.</em>
                   <small>PNG, JPG, WEBP 지원 · 최대 10장까지 등록 가능</small>
-                </label>
+                </div>
                 <div class="ocr-action-row">
                   <button class="ocr-run-button" id="runOcrButton" type="button">OCR로 등록</button>
                   <button class="ocr-clear-review-button" id="clearOcrResultsButton" type="button" hidden>전체 비우기</button>

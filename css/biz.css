@@ -1363,6 +1363,7 @@
   padding: 28px;
   text-align: center;
   background: linear-gradient(180deg, #fbfdff 0%, #f7fbff 100%);
+  cursor: pointer;
 }
 
 .ocr-dropzone input {

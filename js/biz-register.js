@@ -49,6 +49,8 @@ const addOcrResultsButton = $("#addOcrResultsButton");
 const clearOcrResultsButton = $("#clearOcrResultsButton");
 const ocrReviewSummary = $("#ocrReviewSummary");
 const ocrStatus = $("#ocrStatus");
+const ocrPanel = document.querySelector('[data-register-panel="ocr"]');
+const ocrDropzone = document.querySelector("[data-ocr-dropzone]");
 
 let selectedFaceValue = null;
 let giftcards = [];
@@ -66,7 +68,12 @@ const OCR_BARCODE_FAST_PATH_ENABLED = true;
 const OCR_UPLOAD_BATCH_SIZE = 2;
 const OCR_GROUP_SIZE = 5;
 const OCR_MAX_FILES = 10;
+const OCR_ALLOWED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp"]);
+const OCR_MAX_FILE_BYTES = 5 * 1024 * 1024;
+const OCR_MAX_TOTAL_BYTES = 50 * 1024 * 1024;
 const BARCODE_DECODE_PATHS = new Set(["barcode_detector", "barcode_zxing"]);
+
+let ocrPasteSequence = 0;
 
 const sliceOcrFileGroups = (files) => {
   const groups = [];
@@ -562,28 +569,179 @@ const setOcrRunning = (isRunning) => {
 
 const getOcrFiles = () => Array.from(ocrInput?.files || []);
 
-const validateOcrFiles = (files) => {
-  const allowedTypes = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp"]);
-  const maxFileSize = 5 * 1024 * 1024;
-  const maxTotalSize = 50 * 1024 * 1024;
+const isOcrTabActive = () => Boolean(ocrPanel && !ocrPanel.hidden);
 
+const getPasteTimestamp = () => {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date());
+  const map = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
+  return `${map.year}${map.month}${map.day}-${map.hour}${map.minute}${map.second}`;
+};
+
+const extensionForMime = (mime) => {
+  if (mime === "image/png") return "png";
+  if (mime === "image/webp") return "webp";
+  return "jpg";
+};
+
+const createPasteFileName = (mime, sequence) => {
+  const seq = String(sequence).padStart(2, "0");
+  return `paste-${getPasteTimestamp()}-${seq}.${extensionForMime(mime)}`;
+};
+
+const setOcrInputFiles = (files) => {
+  if (!ocrInput) return;
+  const transfer = new DataTransfer();
+  files.forEach((file) => transfer.items.add(file));
+  ocrInput.files = transfer.files;
+};
+
+const resetOcrReviewOnFileChange = () => {
+  ocrReviewItems = [];
+  renderOcrReviewItems();
+};
+
+const syncOcrInputChange = (options = {}) => {
+  const files = getOcrFiles();
+  resetOcrReviewOnFileChange();
+
+  if (files.length > OCR_MAX_FILES) {
+    setOcrStatus("OCR 이미지는 최대 10장까지 등록할 수 있습니다.", "error");
+    return { ok: false, files };
+  }
+
+  if (options.pasteAdded) {
+    setOcrStatus(
+      `붙여넣기 이미지 ${options.pasteAdded.toLocaleString("ko-KR")}장이 추가되었습니다. 총 ${files.length}/${OCR_MAX_FILES}장`,
+      "ok",
+    );
+    return { ok: true, files };
+  }
+
+  setOcrStatus(files.length ? `${files.length.toLocaleString("ko-KR")}개 이미지가 선택되었습니다.` : "", "");
+  return { ok: true, files };
+};
+
+const extractClipboardImageFiles = (clipboardData) => {
+  const blobs = [];
+  for (const item of Array.from(clipboardData?.items || [])) {
+    if (!item.type.startsWith("image/")) continue;
+    const blob = item.getAsFile();
+    if (blob) blobs.push(blob);
+  }
+  return blobs;
+};
+
+const blobToOcrFile = (blob, sequence) => {
+  const mime = OCR_ALLOWED_IMAGE_TYPES.has(blob.type) ? blob.type : "image/png";
+  return new File([blob], createPasteFileName(mime, sequence), {
+    type: mime,
+    lastModified: Date.now(),
+  });
+};
+
+const appendOcrFiles = (newFiles) => {
+  const existing = getOcrFiles();
+  const merged = [...existing, ...newFiles];
+
+  if (merged.length > OCR_MAX_FILES) {
+    return { ok: false, reason: "max_files", added: 0, total: existing.length };
+  }
+
+  const oversized = newFiles.find((file) => file.size > OCR_MAX_FILE_BYTES);
+  if (oversized) {
+    return { ok: false, reason: "max_file_size", added: 0, total: existing.length };
+  }
+
+  const totalSize = merged.reduce((sum, file) => sum + file.size, 0);
+  if (totalSize > OCR_MAX_TOTAL_BYTES) {
+    return { ok: false, reason: "max_total_size", added: 0, total: existing.length };
+  }
+
+  setOcrInputFiles(merged);
+  return { ok: true, added: newFiles.length, total: merged.length };
+};
+
+const isOcrPasteTarget = (target) => {
+  if (!(target instanceof Element)) return false;
+  if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) return true;
+  if (target.isContentEditable) return true;
+  if (target.closest(".paste-box, #pinBulkText, .single-manual-row, [data-ocr-pin], [data-ocr-face-value]")) {
+    return true;
+  }
+  return false;
+};
+
+const handleOcrPaste = (event) => {
+  if (!isOcrTabActive() || isOcrRunning || isOcrPasteTarget(event.target)) return;
+
+  const blobs = extractClipboardImageFiles(event.clipboardData);
+  if (!blobs.length) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const existing = getOcrFiles();
+  if (existing.length >= OCR_MAX_FILES) {
+    setOcrStatus("OCR 이미지는 최대 10장까지 등록할 수 있습니다.", "error");
+    return;
+  }
+
+  const newFiles = [];
+  for (const blob of blobs) {
+    if (existing.length + newFiles.length >= OCR_MAX_FILES) break;
+    ocrPasteSequence += 1;
+    newFiles.push(blobToOcrFile(blob, ocrPasteSequence));
+  }
+
+  if (!newFiles.length) {
+    setOcrStatus("OCR 이미지는 최대 10장까지 등록할 수 있습니다.", "error");
+    return;
+  }
+
+  const result = appendOcrFiles(newFiles);
+  if (!result.ok) {
+    if (result.reason === "max_total_size") {
+      setOcrStatus("전체 이미지 용량은 50MB 이하만 업로드할 수 있습니다.", "error");
+      return;
+    }
+    if (result.reason === "max_file_size") {
+      setOcrStatus("지원하지 않는 형식 또는 5MB 초과 이미지는 실패 항목으로 표시됩니다.", "error");
+      return;
+    }
+    setOcrStatus("OCR 이미지는 최대 10장까지 등록할 수 있습니다.", "error");
+    return;
+  }
+
+  syncOcrInputChange({ pasteAdded: result.added });
+};
+
+const validateOcrFiles = (files) => {
   if (!files.length) {
     setOcrStatus("OCR을 실행할 이미지를 선택해주세요.", "error");
     return false;
   }
 
   if (files.length > OCR_MAX_FILES) {
-    setOcrStatus(`OCR 이미지는 한 번에 최대 ${OCR_MAX_FILES}장까지 등록할 수 있습니다.`, "error");
+    setOcrStatus("OCR 이미지는 최대 10장까지 등록할 수 있습니다.", "error");
     return false;
   }
 
   const totalSize = files.reduce((sum, file) => sum + file.size, 0);
-  if (totalSize > maxTotalSize) {
+  if (totalSize > OCR_MAX_TOTAL_BYTES) {
     setOcrStatus("전체 이미지 용량은 50MB 이하만 업로드할 수 있습니다.", "error");
     return false;
   }
 
-  const hasInvalidFile = files.some((file) => !allowedTypes.has(file.type) || file.size > maxFileSize);
+  const hasInvalidFile = files.some((file) => !OCR_ALLOWED_IMAGE_TYPES.has(file.type) || file.size > OCR_MAX_FILE_BYTES);
   if (hasInvalidFile) {
     setOcrStatus("지원하지 않는 형식 또는 5MB 초과 이미지는 실패 항목으로 표시됩니다.", "");
   }
@@ -1295,15 +1453,20 @@ ocrReviewList?.addEventListener("click", (event) => {
   removeOcrReviewItem(Number(button.dataset.ocrRemove));
 });
 ocrInput?.addEventListener("change", () => {
-  const files = getOcrFiles();
-  ocrReviewItems = [];
-  renderOcrReviewItems();
-  if (files.length > 10) {
-    setOcrStatus("OCR 이미지는 한 번에 최대 10장까지 등록할 수 있습니다.", "error");
-    return;
-  }
-  setOcrStatus(files.length ? `${files.length.toLocaleString("ko-KR")}개 이미지가 선택되었습니다.` : "", "");
+  syncOcrInputChange();
 });
+ocrDropzone?.addEventListener("click", () => {
+  if (!isOcrTabActive() || isOcrRunning) return;
+  ocrInput?.click();
+});
+ocrDropzone?.addEventListener("keydown", (event) => {
+  if (!isOcrTabActive() || isOcrRunning) return;
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    ocrInput?.click();
+  }
+});
+document.addEventListener("paste", handleOcrPaste, true);
 
 document.addEventListener("seumbiz:auth-ready", () => {
   setSubmitReady();
