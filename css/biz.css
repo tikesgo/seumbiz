@@ -1432,13 +1432,21 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
 }
 
 .ocr-image-preview-head strong {
-  color: #10233f;
-  font-size: 13px;
-  font-weight: 850;
+  color: #0b1a33;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.ocr-image-preview-head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .ocr-image-preview-clear-button {
@@ -1541,10 +1549,31 @@
 }
 
 .ocr-image-preview-count {
-  margin: 10px 0 0;
-  color: #667085;
-  font-size: 12px;
-  font-weight: 750;
+  color: #475467;
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ocr-image-preview-empty {
+  margin-top: 12px;
+  padding: 18px 12px;
+  border: 1px dashed #dbe3ef;
+  border-radius: 8px;
+  text-align: center;
+  background: #f9fbfd;
+}
+
+.ocr-image-preview-empty p {
+  margin: 0;
+  color: #98a2b3;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.ocr-image-preview-empty p + p {
+  margin-top: 6px;
 }
 
 .ocr-action-row {

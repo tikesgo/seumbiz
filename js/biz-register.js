@@ -53,6 +53,7 @@ const ocrPanel = document.querySelector('[data-register-panel="ocr"]');
 const ocrDropzone = document.querySelector("[data-ocr-dropzone]");
 const ocrImagePreview = $("#ocrImagePreview");
 const ocrImagePreviewGrid = $("#ocrImagePreviewGrid");
+const ocrImagePreviewEmpty = $("#ocrImagePreviewEmpty");
 const ocrImagePreviewCount = $("#ocrImagePreviewCount");
 const clearOcrImagesButton = $("#clearOcrImagesButton");
 
@@ -640,17 +641,25 @@ const renderOcrImagePreview = () => {
   revokeOcrImagePreviewUrls();
 
   const files = getOcrFiles();
-  ocrImagePreviewCount.textContent = `총 ${files.length}/${OCR_MAX_FILES}장`;
+  ocrImagePreviewCount.textContent = `${files.length} / ${OCR_MAX_FILES}장`;
 
   if (!files.length) {
-    ocrImagePreview.hidden = true;
+    if (ocrImagePreviewEmpty) ocrImagePreviewEmpty.hidden = false;
+    ocrImagePreviewGrid.hidden = true;
     ocrImagePreviewGrid.innerHTML = "";
-    if (clearOcrImagesButton) clearOcrImagesButton.disabled = isOcrRunning;
+    if (clearOcrImagesButton) {
+      clearOcrImagesButton.hidden = true;
+      clearOcrImagesButton.disabled = isOcrRunning;
+    }
     return;
   }
 
-  ocrImagePreview.hidden = false;
-  if (clearOcrImagesButton) clearOcrImagesButton.disabled = isOcrRunning;
+  if (ocrImagePreviewEmpty) ocrImagePreviewEmpty.hidden = true;
+  ocrImagePreviewGrid.hidden = false;
+  if (clearOcrImagesButton) {
+    clearOcrImagesButton.hidden = false;
+    clearOcrImagesButton.disabled = isOcrRunning;
+  }
 
   ocrImagePreviewGrid.innerHTML = files
     .map((file, index) => {
@@ -1573,3 +1582,4 @@ loadGiftcards();
 updateBulkCounter();
 setSubmitReady();
 renderPreview();
+renderOcrImagePreview();

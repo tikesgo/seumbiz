@@ -105,13 +105,19 @@
                   <em>한 번에 최대 10장까지 등록할 수 있습니다.</em>
                   <small>PNG, JPG, WEBP 지원 · 최대 10장까지 등록 가능</small>
                 </div>
-                <div class="ocr-image-preview" id="ocrImagePreview" hidden>
+                <div class="ocr-image-preview" id="ocrImagePreview">
                   <div class="ocr-image-preview-head">
                     <strong>등록 이미지 미리보기</strong>
-                    <button class="ocr-image-preview-clear-button" id="clearOcrImagesButton" type="button">전체 삭제</button>
+                    <div class="ocr-image-preview-head-actions">
+                      <span class="ocr-image-preview-count" id="ocrImagePreviewCount">0 / 10장</span>
+                      <button class="ocr-image-preview-clear-button" id="clearOcrImagesButton" type="button" hidden>전체 삭제</button>
+                    </div>
                   </div>
-                  <div class="ocr-image-preview-grid" id="ocrImagePreviewGrid"></div>
-                  <p class="ocr-image-preview-count" id="ocrImagePreviewCount">총 0/10장</p>
+                  <div class="ocr-image-preview-empty" id="ocrImagePreviewEmpty">
+                    <p>이미지가 아직 없습니다.</p>
+                    <p>상품권 이미지를 업로드하거나<br />Ctrl+V로 붙여넣으면 여기에 표시됩니다.</p>
+                  </div>
+                  <div class="ocr-image-preview-grid" id="ocrImagePreviewGrid" hidden></div>
                 </div>
                 <div class="ocr-action-row">
                   <button class="ocr-run-button" id="runOcrButton" type="button">OCR로 등록</button>
