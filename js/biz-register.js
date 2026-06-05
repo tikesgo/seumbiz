@@ -39,6 +39,8 @@ const manualRow = $(".single-manual-row");
 const selectedGiftLabel = $("[data-selected-gift-label]");
 const registerCount = $("[data-register-count]");
 const registerTotal = $("[data-register-total]");
+const registerAdminNote = $("[data-register-admin-note]");
+const registerAdminCount = $("[data-register-admin-count]");
 const clearPendingButton = $("#clearPendingItems");
 const ocrInput = $("#giftCardImage");
 const runOcrButton = $("#runOcrButton");
@@ -59,7 +61,7 @@ let isAuthReady = Boolean(window.SEUMBizAuth?.companyId);
 
 const LOGIN_EXPIRED_MESSAGE = "\uB85C\uADF8\uC778\uC774 \uB9CC\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uB2E4\uC2DC \uB85C\uADF8\uC778\uD574\uC8FC\uC138\uC694.";
 const AUTH_WAIT_MESSAGE = "\uB85C\uADF8\uC778 \uC815\uBCF4\uB97C \uD655\uC778\uD558\uB294 \uC911\uC785\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.";
-const OCR_AMOUNT_PENDING_STATUS = "\uAE08\uC561 \uBBF8\uD655\uC815";
+const OCR_PIN_READY_STATUS = "PIN \uCD94\uCD9C \uC644\uB8CC";
 const OCR_BARCODE_FAST_PATH_ENABLED = true;
 const OCR_UPLOAD_BATCH_SIZE = 2;
 const OCR_GROUP_SIZE = 5;
@@ -94,8 +96,14 @@ const escapeHtml = (value) =>
     .replaceAll("'", "&#039;");
 
 const formatMoney = (value) => {
-  if (!value) return "금액 필요";
+  if (!value) return "0원";
   return `${Number(value).toLocaleString("ko-KR")}원`;
+};
+
+const formatPendingListFaceValue = (item) => {
+  if (item.face_value) return formatMoney(item.face_value);
+  if (item.source === "ocr") return "관리자 확인";
+  return "—";
 };
 
 const formatFaceValueLabel = (value) => {
@@ -328,8 +336,8 @@ const parseBulkLine = (line) => {
 const getItemStatus = (item, pinCounts) => {
   if (!isValidPin(item.pin_no)) return { label: "형식 오류", className: "is-error" };
   if (pinCounts.get(item.pin_no) > 1) return { label: "중복", className: "is-error" };
-  if (!item.face_value && item.source === "ocr") return { label: OCR_AMOUNT_PENDING_STATUS, className: "is-warning" };
-  if (!item.face_value) return { label: "금액 필요", className: "is-warning" };
+  if (!item.face_value && item.source === "ocr") return { label: OCR_PIN_READY_STATUS, className: "is-ready" };
+  if (!item.face_value) return { label: "액면가 선택", className: "is-warning" };
   if (
     item.source === "ocr" &&
     selectedGiftcard?.enabled_amounts?.length &&
@@ -376,9 +384,12 @@ const renderPreview = () => {
 
   const items = getItemsWithStatus();
   const totalFaceValue = items.reduce((sum, item) => sum + (Number(item.face_value) || 0), 0);
+  const adminPendingCount = items.filter((item) => item.source === "ocr" && !item.face_value).length;
 
   if (registerCount) registerCount.textContent = items.length.toLocaleString("ko-KR");
-  if (registerTotal) registerTotal.textContent = totalFaceValue ? formatMoney(totalFaceValue) : "0원";
+  if (registerTotal) registerTotal.textContent = formatMoney(totalFaceValue);
+  if (registerAdminNote) registerAdminNote.hidden = adminPendingCount === 0;
+  if (registerAdminCount) registerAdminCount.textContent = adminPendingCount.toLocaleString("ko-KR");
   if (clearPendingButton) clearPendingButton.disabled = items.length === 0;
 
   if (!items.length) {
@@ -399,7 +410,7 @@ const renderPreview = () => {
           <td>${item.no}</td>
           <td>${escapeHtml(item.pin_no)}</td>
           <td>${renderPreviewGiftcard(item)}</td>
-          <td>${escapeHtml(formatMoney(item.face_value))}</td>
+          <td class="${item.source === "ocr" && !item.face_value ? "preview-face-pending" : ""}">${escapeHtml(formatPendingListFaceValue(item))}</td>
           <td><span class="preview-status ${item.statusClass}">${escapeHtml(item.status)}</span></td>
         </tr>
       `,
@@ -1215,12 +1226,12 @@ const handleSubmit = async () => {
   }
 
   const hasBlockingItem = previewItems.some((item) => {
-    const isOcrAmountPending = item.source === "ocr" && !item.face_value && item.status === OCR_AMOUNT_PENDING_STATUS;
-    return item.statusClass === "is-error" || (item.statusClass === "is-warning" && !isOcrAmountPending);
+    const isOcrPinReady = item.source === "ocr" && !item.face_value && item.status === OCR_PIN_READY_STATUS;
+    return item.statusClass === "is-error" || (item.statusClass === "is-warning" && !isOcrPinReady);
   });
 
   if (hasBlockingItem) {
-    setStatus("중복, 금액 필요, 형식 오류 상태를 먼저 정리해주세요. OCR 금액 미확정 항목은 접수 후 관리자 검수에서 확정됩니다.", "error");
+    setStatus("중복, 액면가 선택, 형식 오류 상태를 먼저 정리해주세요. OCR PIN 추출 완료 항목은 접수 후 관리자가 금액을 확정합니다.", "error");
     return;
   }
 
