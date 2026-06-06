@@ -633,7 +633,7 @@
                 </label>
                 <label>
                   &#44552;&#50529;
-                  <input id="companyAdjustmentAmount" type="number" min="1" step="1" placeholder="100000" required />
+                  <input id="companyAdjustmentAmount" type="text" inputmode="numeric" placeholder="100000" required />
                 </label>
               </div>
               <label>
@@ -731,11 +731,11 @@
               <div class="sb-form-row">
                 <label>
                   기본 요율
-                  <input id="giftcardDefaultRate" type="number" min="0.01" max="100" step="0.01" placeholder="92.00" required />
+                  <input id="giftcardDefaultRate" type="text" inputmode="decimal" placeholder="92.00" required />
                 </label>
                 <label>
                   정렬 순서
-                  <input id="giftcardSortOrder" type="number" step="1" placeholder="10" />
+                  <input id="giftcardSortOrder" type="text" inputmode="numeric" placeholder="10" />
                 </label>
               </div>
 
@@ -832,7 +832,7 @@
           <form class="sb-approve-form" id="approveForm">
             <label>
               관리자 확정 정산금
-              <input id="approvedSettlementAmount" type="number" min="1" step="1" placeholder="비우면 예상 정산금 사용" />
+              <input id="approvedSettlementAmount" type="text" inputmode="numeric" placeholder="비우면 예상 정산금 사용" />
             </label>
             <label>
               승인 메모

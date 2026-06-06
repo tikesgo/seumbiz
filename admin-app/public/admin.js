@@ -187,6 +187,17 @@ alertToggleButton.addEventListener("pointerdown", () => {
 });
 
 document.addEventListener(
+  "wheel",
+  (event) => {
+    const active = document.activeElement;
+    if (active instanceof HTMLInputElement && active.type === "number") {
+      event.preventDefault();
+    }
+  },
+  { passive: false, capture: true }
+);
+
+document.addEventListener(
   "pointerdown",
   () => {
     unlockAlertSound();
@@ -1165,11 +1176,13 @@ function editableCell(field, value, type, step = "1") {
   const input = document.createElement("input");
   input.className = "table-input";
   input.dataset.field = field;
-  input.type = type;
-  input.value = value;
   if (type === "number") {
-    input.step = step;
+    input.type = "text";
+    input.inputMode = String(step).includes(".") ? "decimal" : "numeric";
+  } else {
+    input.type = type;
   }
+  input.value = value;
   td.append(input);
   return td;
 }

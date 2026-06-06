@@ -244,6 +244,7 @@ const els = {
 init();
 
 function init() {
+  preventNumericInputWheel();
   els.loginForm.addEventListener("submit", handleLogin);
   els.changePasswordButton?.addEventListener("click", openPasswordChangeModal);
   els.passwordChangeForm?.addEventListener("submit", handlePasswordChangeSubmit);
@@ -1225,7 +1226,7 @@ function renderPurchaseItemsBody(items, actionable) {
       const tr = document.createElement("tr");
       const faceValue = normalizePlainAmount(item.face_value);
       const amountCell = actionable
-        ? `<input class="sb-item-face-input" type="number" min="1" step="1" value="${faceValue || ""}" placeholder="금액 입력" data-purchase-item-amount="${escapeHtml(item.id)}" />`
+        ? `<input class="sb-item-face-input" type="text" inputmode="numeric" value="${faceValue || ""}" placeholder="금액 입력" data-purchase-item-amount="${escapeHtml(item.id)}" />`
         : escapeHtml(faceValue ? formatWon(faceValue) : "-");
       const statusCell = faceValue ? renderStatus(item.status) : `<span class="sb-soft-warning">금액 미확정</span>`;
 
@@ -1895,10 +1896,8 @@ function renderCompanyGiftcardRates(items) {
         <td>
           <input
             class="sb-company-rate-input"
-            type="number"
-            min="0.01"
-            max="100"
-            step="0.01"
+            type="text"
+            inputmode="decimal"
             placeholder="\uAE30\uBCF8\uAC12"
             value="${hasOverride ? normalizePlainAmount(row.company_override_rate) : ""}"
             aria-label="${escapeHtml(row.name || row.code || "\uC0C1\uD488\uAD8C")} \uC5C5\uCCB4 \uC694\uC728"
@@ -3057,6 +3056,19 @@ function handlePaginationClick(button) {
     state.adminLogPage = page;
     loadAdminLogs({ page });
   }
+}
+
+function preventNumericInputWheel() {
+  document.addEventListener(
+    "wheel",
+    (event) => {
+      const active = document.activeElement;
+      if (active instanceof HTMLInputElement && active.type === "number") {
+        event.preventDefault();
+      }
+    },
+    { passive: false, capture: true }
+  );
 }
 
 function setWithdrawReviewLoading() {

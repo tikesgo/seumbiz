@@ -257,3 +257,14 @@ requireBizAuth().catch((error) => {
   console.error(error);
   redirectToLogin("auth_error");
 });
+
+document.addEventListener(
+  "wheel",
+  (event) => {
+    const active = document.activeElement;
+    if (active instanceof HTMLInputElement && active.type === "number") {
+      event.preventDefault();
+    }
+  },
+  { passive: false, capture: true }
+);
