@@ -3756,6 +3756,7 @@ async function handleSeumBizWithdrawRequestReview(req, res, withdrawRequestId) {
       (sum, row) => sum + normalizeNumber(row.amount, 0),
       0
     );
+    const isPrepaidSettlement = currentBalance < 0;
 
     sendJson(res, 200, {
       ok: true,
@@ -3773,7 +3774,12 @@ async function handleSeumBizWithdrawRequestReview(req, res, withdrawRequestId) {
         current_balance: currentBalance
       },
       summary: {
-        projected_balance_after: currentBalance - withdrawAmount,
+        processing_mode: isPrepaidSettlement ? "prepaid_settlement" : "withdraw_completed",
+        projected_label: isPrepaidSettlement ? "상계 후 예상 잔액" : "출금 후 예상 잔액",
+        processing_label: isPrepaidSettlement ? "선지급 상계" : "출금 완료",
+        projected_balance_after: isPrepaidSettlement
+          ? currentBalance + withdrawAmount
+          : currentBalance - withdrawAmount,
         other_pending_withdraw_total: otherPendingTotal
       },
       recentApprovedPurchases: recentPurchases || [],
@@ -3874,6 +3880,24 @@ function escapePostgrestIlikePattern(value) {
 
 function formatAdminLogStatus(value) {
   return ADMIN_LOG_STATUS_LABELS[value] || value || "-";
+}
+
+const ADMIN_LOG_LEDGER_TYPE_LABELS = {
+  withdraw_completed: "출금 완료",
+  prepaid_settlement: "선지급 정산",
+  purchase_approved: "매입 승인",
+  manual_credit: "수동 적립",
+  manual_debit: "수동 차감"
+};
+
+function formatAdminLogLedgerType(value) {
+  return ADMIN_LOG_LEDGER_TYPE_LABELS[value] || value || "-";
+}
+
+function formatSignedLedgerAmountForLog(value) {
+  const number = Number(value || 0);
+  if (!Number.isFinite(number) || number === 0) return "0원";
+  return `${number > 0 ? "+" : "-"}${formatKoreanWon(Math.abs(number))}`;
 }
 
 function extractAdminLogAmount(row) {
@@ -3981,6 +4005,15 @@ function buildAdminLogChangeView(row, enrich = {}) {
     }
     if (after.balance_after !== null && after.balance_after !== undefined) {
       afterLines.push({ label: "처리 후 잔액", value: formatKoreanWon(after.balance_after) });
+    }
+    if (after.ledger_type) {
+      afterLines.push({
+        label: "원장 유형",
+        value: after.ledger_type === "prepaid_settlement" ? "선지급 정산" : formatAdminLogLedgerType(after.ledger_type)
+      });
+    }
+    if (after.ledger_amount !== null && after.ledger_amount !== undefined) {
+      afterLines.push({ label: "원장 금액", value: formatSignedLedgerAmountForLog(after.ledger_amount) });
     }
     if (after.ledger_id) afterLines.push({ label: "Ledger", value: "생성" });
   } else if (row.action === "manual_credit" || row.action === "manual_debit") {

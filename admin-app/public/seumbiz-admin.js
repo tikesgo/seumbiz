@@ -191,6 +191,7 @@ const els = {
   withdrawAdminMemo: document.querySelector("#withdrawAdminMemo"),
   withdrawReadonlyNote: document.querySelector("#withdrawReadonlyNote"),
   withdrawNegativeBalanceNote: document.querySelector("#withdrawNegativeBalanceNote"),
+  withdrawPrepaidSettlementNote: document.querySelector("#withdrawPrepaidSettlementNote"),
   giftcardBody: document.querySelector("#giftcardBody"),
   giftcardOpenCreateButton: document.querySelector("#giftcardOpenCreateButton"),
   giftcardModal: document.querySelector("#giftcardModal"),
@@ -1764,6 +1765,7 @@ function formatLedgerType(type) {
   const labels = {
     purchase_approved: "\uC2B9\uC778 \uBC18\uC601",
     withdraw_completed: "\uCD9C\uAE08 \uC644\uB8CC",
+    prepaid_settlement: "\uC120\uC9C0\uAE09 \uC815\uC0B0",
     manual_credit: "\uC218\uB3D9 \uC801\uB9BD",
     manual_debit: "\uC218\uB3D9 \uCC28\uAC10",
     admin_deduct: "\uAD00\uB9AC\uC790 \uCC28\uAC10",
@@ -3171,22 +3173,36 @@ function renderWithdrawReviewLedger(rows) {
   );
 }
 
+function getWithdrawReviewDisplay(currentBalance, withdrawAmount, summary = {}) {
+  const balance = Number(currentBalance || 0);
+  const amount = Number(withdrawAmount || 0);
+  const isPrepaidSettlement = balance < 0 || summary.processing_mode === "prepaid_settlement";
+
+  return {
+    isPrepaidSettlement,
+    projectedBalance: isPrepaidSettlement ? balance + amount : balance - amount,
+    projectedLabel: isPrepaidSettlement ? "상계 후 예상 잔액" : "출금 후 예상 잔액",
+    processingLabel: isPrepaidSettlement ? "선지급 상계" : "출금 완료",
+  };
+}
+
 function renderWithdrawReviewSummary(data) {
   if (!els.withdrawReviewSummary) return;
 
   const withdraw = data.withdraw || {};
   const company = data.company || {};
   const summary = data.summary || {};
-  const projectedBalance = Number(summary.projected_balance_after || 0);
-  const isNegativeProjected = Number.isFinite(projectedBalance) && projectedBalance < 0;
+  const reviewDisplay = getWithdrawReviewDisplay(company.current_balance, withdraw.amount, summary);
+  const { isPrepaidSettlement, projectedBalance, projectedLabel, processingLabel } = reviewDisplay;
 
   els.withdrawReviewSummary.replaceChildren(
     createCompanyDetailItem("업체명", company.id, company.company_name),
     createDetailItem("현재 잔액", formatWon(company.current_balance)),
-    createDetailItem("출금 신청액", formatWon(withdraw.amount)),
+    createDetailItem("처리 유형", processingLabel),
+    createDetailItem("신청 금액", formatWon(withdraw.amount)),
     createDetailHtmlItem(
-      "출금 후 예상 잔액",
-      `<span class="${isNegativeProjected ? "is-negative-balance" : ""}">${formatWon(projectedBalance)}</span>`
+      projectedLabel,
+      `<span class="${projectedBalance < 0 ? "is-negative-balance" : projectedBalance > 0 ? "is-positive-balance" : ""}">${formatWon(projectedBalance)}</span>`
     ),
     createDetailItem("기타 대기 출금 합계", formatWon(summary.other_pending_withdraw_total)),
     createDetailItem("신청 상태", getStatusLabel(withdraw.status)),
@@ -3194,7 +3210,11 @@ function renderWithdrawReviewSummary(data) {
   );
 
   if (els.withdrawNegativeBalanceNote) {
-    els.withdrawNegativeBalanceNote.hidden = !isNegativeProjected;
+    els.withdrawNegativeBalanceNote.hidden = true;
+  }
+
+  if (els.withdrawPrepaidSettlementNote) {
+    els.withdrawPrepaidSettlementNote.hidden = !isPrepaidSettlement;
   }
 }
 
