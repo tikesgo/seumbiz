@@ -923,24 +923,69 @@
 
     <div class="sb-modal" id="withdrawModal" hidden>
       <div class="sb-modal-backdrop" data-close-withdraw-modal></div>
-      <section class="sb-modal-card sb-modal-card-small" role="dialog" aria-modal="true" aria-labelledby="withdrawModalTitle">
+      <section class="sb-modal-card sb-withdraw-review-modal-card" role="dialog" aria-modal="true" aria-labelledby="withdrawModalTitle">
         <header class="sb-modal-header">
           <div>
-            <p class="sb-eyebrow">WITHDRAW COMPLETE</p>
-            <h2 id="withdrawModalTitle">출금 완료 처리</h2>
+            <p class="sb-eyebrow">WITHDRAW REVIEW</p>
+            <h2 id="withdrawModalTitle">출금 검토</h2>
+            <p class="sb-withdraw-review-desc" id="withdrawModalDesc">잔액 형성 이력을 확인한 뒤 출금 완료 처리하세요.</p>
           </div>
           <button class="sb-icon-button" type="button" data-close-withdraw-modal aria-label="닫기">×</button>
         </header>
 
-        <div class="sb-detail-grid" id="withdrawDetailGrid"></div>
+        <div class="sb-detail-grid sb-withdraw-review-summary" id="withdrawReviewSummary"></div>
 
-        <form class="sb-approve-form" id="withdrawCompleteForm">
-          <label>
-            관리자 메모
-            <textarea id="withdrawAdminMemo" placeholder="카카오톡 확인 및 수동 이체 메모를 입력하세요."></textarea>
-          </label>
-          <button class="sb-primary-button" id="withdrawCompleteButton" type="submit">출금 완료 처리</button>
-        </form>
+        <section class="sb-modal-section sb-withdraw-review-section">
+          <div class="sb-withdraw-review-section-head">
+            <h3>최근 승인 매입</h3>
+            <span>최근 10건</span>
+          </div>
+          <div class="sb-modal-table sb-withdraw-review-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>접수번호</th>
+                  <th>상품권</th>
+                  <th class="is-count">건수</th>
+                  <th class="is-amount">승인 정산금</th>
+                  <th class="is-date">승인시각</th>
+                </tr>
+              </thead>
+              <tbody id="withdrawReviewPurchaseBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="sb-modal-section sb-withdraw-review-section">
+          <div class="sb-withdraw-review-section-head">
+            <h3>최근 잔액 변동</h3>
+            <span>최근 20건</span>
+          </div>
+          <div class="sb-modal-table sb-withdraw-review-table">
+            <table>
+              <thead>
+                <tr>
+                  <th class="is-date">시간</th>
+                  <th class="is-type">구분</th>
+                  <th class="is-amount">금액</th>
+                  <th>메모</th>
+                </tr>
+              </thead>
+              <tbody id="withdrawReviewLedgerBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <div class="sb-withdraw-review-complete" id="withdrawCompleteSection">
+          <form class="sb-approve-form" id="withdrawCompleteForm">
+            <label>
+              관리자 메모
+              <textarea id="withdrawAdminMemo" placeholder="카카오톡 확인 및 수동 이체 메모를 입력하세요."></textarea>
+            </label>
+            <p class="sb-withdraw-review-readonly-note" id="withdrawReadonlyNote" hidden>처리가 완료되었거나 반려된 출금신청은 읽기 전용입니다.</p>
+            <button class="sb-primary-button" id="withdrawCompleteButton" type="submit">출금 완료 처리</button>
+          </form>
+        </div>
       </section>
     </div>
 

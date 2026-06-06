@@ -265,6 +265,12 @@ const server = createServer((req, res) => {
     return;
   }
 
+  const seumBizWithdrawReviewMatch = pathname.match(/^\/admin\/seumbiz\/withdraw-requests\/([^/]+)\/review$/);
+  if (seumBizWithdrawReviewMatch && req.method === "GET") {
+    handleSeumBizWithdrawRequestReview(req, res, seumBizWithdrawReviewMatch[1]);
+    return;
+  }
+
   const seumBizWithdrawCompleteMatch = pathname.match(/^\/admin\/seumbiz\/withdraw-requests\/([^/]+)\/complete$/);
   if (seumBizWithdrawCompleteMatch && req.method === "POST") {
     handleSeumBizWithdrawRequestComplete(req, res, seumBizWithdrawCompleteMatch[1]);
@@ -3701,6 +3707,84 @@ async function handleSeumBizWithdrawRequests(req, res) {
     });
   } catch (error) {
     sendJson(res, 500, { ok: false, message: "출금신청 목록을 불러오지 못했습니다.", detail: String(error.message || error) });
+  }
+}
+
+async function handleSeumBizWithdrawRequestReview(req, res, withdrawRequestId) {
+  const context = await requireSeumBizAdmin(req, res);
+  if (!context) return;
+
+  try {
+    const withdrawRows = await supabaseAdminRequest(
+      `/rest/v1/biz_withdraw_requests?id=eq.${encodeURIComponent(withdrawRequestId)}&select=id,company_id,amount,status,memo,admin_memo,created_at&limit=1`
+    );
+    const withdraw = withdrawRows?.[0];
+    if (!withdraw) {
+      sendJson(res, 404, { ok: false, message: "출금신청을 찾을 수 없습니다." });
+      return;
+    }
+
+    const companyId = withdraw.company_id;
+    const [companies, balances, otherPendingRows, recentPurchases, recentLedger] = await Promise.all([
+      supabaseAdminRequest(
+        `/rest/v1/biz_companies?id=eq.${encodeURIComponent(companyId)}&select=id,company_name&limit=1`
+      ),
+      supabaseAdminRequest(
+        `/rest/v1/biz_company_balances?company_id=eq.${encodeURIComponent(companyId)}&select=company_id,balance_amount&limit=1`
+      ),
+      supabaseAdminRequest(
+        `/rest/v1/biz_withdraw_requests?company_id=eq.${encodeURIComponent(
+          companyId
+        )}&status=eq.pending&id=neq.${encodeURIComponent(withdrawRequestId)}&select=id,amount`
+      ),
+      supabaseAdminRequest(
+        `/rest/v1/biz_purchase_requests?company_id=eq.${encodeURIComponent(
+          companyId
+        )}&status=eq.approved&select=id,receipt_no,giftcard_type,giftcard_name_snapshot,item_count,approved_settlement_amount,expected_settlement_amount,approved_at,reviewed_at&order=approved_at.desc.nullslast,reviewed_at.desc&limit=10`
+      ),
+      supabaseAdminRequest(
+        `/rest/v1/biz_balance_ledger?company_id=eq.${encodeURIComponent(
+          companyId
+        )}&select=id,ledger_type,amount,reason,memo,created_at&order=created_at.desc&limit=20`
+      )
+    ]);
+
+    const company = companies?.[0];
+    const currentBalance = normalizeNumber(balances?.[0]?.balance_amount, 0);
+    const withdrawAmount = normalizeNumber(withdraw.amount, 0);
+    const otherPendingTotal = (otherPendingRows || []).reduce(
+      (sum, row) => sum + normalizeNumber(row.amount, 0),
+      0
+    );
+
+    sendJson(res, 200, {
+      ok: true,
+      withdraw: {
+        id: withdraw.id,
+        amount: withdrawAmount,
+        status: withdraw.status,
+        memo: withdraw.memo || "",
+        admin_memo: withdraw.admin_memo || "",
+        created_at: withdraw.created_at
+      },
+      company: {
+        id: company?.id || companyId,
+        company_name: company?.company_name || "-",
+        current_balance: currentBalance
+      },
+      summary: {
+        projected_balance_after: currentBalance - withdrawAmount,
+        other_pending_withdraw_total: otherPendingTotal
+      },
+      recentApprovedPurchases: recentPurchases || [],
+      recentLedger: recentLedger || []
+    });
+  } catch (error) {
+    sendJson(res, 500, {
+      ok: false,
+      message: "출금 검토 정보를 불러오지 못했습니다.",
+      detail: String(error.message || error)
+    });
   }
 }
 

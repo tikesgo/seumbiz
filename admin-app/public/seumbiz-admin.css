@@ -2471,3 +2471,103 @@ tbody tr:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.sb-withdraw-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sb-withdraw-review-modal-card.sb-modal-card {
+  width: min(1180px, calc(100vw - 40px));
+  max-height: min(90vh, 920px);
+  gap: 12px;
+  padding: 18px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sb-withdraw-review-desc {
+  margin: 6px 0 0;
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.sb-withdraw-review-summary.sb-detail-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sb-withdraw-review-summary .sb-detail-item {
+  min-height: 58px;
+  gap: 4px;
+  padding: 10px 11px;
+  border-radius: 12px;
+}
+
+.sb-withdraw-review-section {
+  width: 100%;
+}
+
+.sb-withdraw-review-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.sb-withdraw-review-section-head h3 {
+  margin: 0;
+  color: #10233f;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.sb-withdraw-review-section-head span {
+  color: #98a2b3;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.sb-withdraw-review-table {
+  width: 100%;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.sb-withdraw-review-table table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.sb-withdraw-review-table th,
+.sb-withdraw-review-table td {
+  padding: 9px 10px;
+  font-size: 12px;
+}
+
+.sb-withdraw-review-table .is-count {
+  width: 72px;
+  text-align: center;
+}
+
+.sb-withdraw-review-complete {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid #e4ebf5;
+}
+
+.sb-withdraw-review-readonly-note {
+  margin: 0 0 10px;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+@media (max-width: 900px) {
+  .sb-withdraw-review-summary.sb-detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

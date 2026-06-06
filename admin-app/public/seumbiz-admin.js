@@ -17,6 +17,7 @@ const state = {
   selectedPurchaseStatus: "",
   selectedPurchaseRequest: null,
   selectedWithdrawRequestId: "",
+  selectedWithdrawStatus: "",
   selectedPurchaseReceiptNo: "",
   selectedPurchaseRate: 0,
   selectedPurchasePinRows: [],
@@ -177,10 +178,16 @@ const els = {
   purchaseRejectMemo: document.querySelector("#purchaseRejectMemo"),
   purchaseClosedNotice: document.querySelector("#purchaseClosedNotice"),
   withdrawModal: document.querySelector("#withdrawModal"),
-  withdrawDetailGrid: document.querySelector("#withdrawDetailGrid"),
+  withdrawModalTitle: document.querySelector("#withdrawModalTitle"),
+  withdrawModalDesc: document.querySelector("#withdrawModalDesc"),
+  withdrawReviewSummary: document.querySelector("#withdrawReviewSummary"),
+  withdrawReviewPurchaseBody: document.querySelector("#withdrawReviewPurchaseBody"),
+  withdrawReviewLedgerBody: document.querySelector("#withdrawReviewLedgerBody"),
+  withdrawCompleteSection: document.querySelector("#withdrawCompleteSection"),
   withdrawCompleteForm: document.querySelector("#withdrawCompleteForm"),
   withdrawCompleteButton: document.querySelector("#withdrawCompleteButton"),
   withdrawAdminMemo: document.querySelector("#withdrawAdminMemo"),
+  withdrawReadonlyNote: document.querySelector("#withdrawReadonlyNote"),
   giftcardBody: document.querySelector("#giftcardBody"),
   giftcardOpenCreateButton: document.querySelector("#giftcardOpenCreateButton"),
   giftcardModal: document.querySelector("#giftcardModal"),
@@ -335,9 +342,15 @@ function init() {
       return;
     }
 
-    const withdrawButton = event.target.closest("[data-withdraw-id]");
-    if (withdrawButton) {
-      openWithdrawModal(withdrawButton.dataset.withdrawId);
+    const withdrawReviewButton = event.target.closest("[data-withdraw-review-id]");
+    if (withdrawReviewButton) {
+      openWithdrawReviewModal(withdrawReviewButton.dataset.withdrawReviewId);
+      return;
+    }
+
+    const withdrawCompleteOpenButton = event.target.closest("[data-withdraw-complete-id]");
+    if (withdrawCompleteOpenButton) {
+      openWithdrawReviewModal(withdrawCompleteOpenButton.dataset.withdrawCompleteId, { scrollToComplete: true });
       return;
     }
 
@@ -1498,7 +1511,16 @@ function renderWithdraws() {
         <td>${formatWon(row.amount)}</td>
         <td>${renderStatus(row.status)}</td>
         <td>${formatDateTime(row.created_at)}</td>
-        <td><button class="sb-table-action" type="button" data-withdraw-id="${escapeHtml(row.id)}" ${isPending ? "" : "disabled"}>완료 처리</button></td>
+        <td class="is-action">
+          <div class="sb-withdraw-actions">
+            <button class="sb-table-action" type="button" data-withdraw-review-id="${escapeHtml(row.id)}">상세보기</button>
+            ${
+              isPending
+                ? `<button class="sb-table-action sb-table-action-primary" type="button" data-withdraw-complete-id="${escapeHtml(row.id)}">완료처리</button>`
+                : ""
+            }
+          </div>
+        </td>
       `;
       return tr;
     })
@@ -3037,29 +3059,147 @@ function handlePaginationClick(button) {
   }
 }
 
-function openWithdrawModal(withdrawRequestId) {
-  const request = state.withdraws.find((row) => row.id === withdrawRequestId);
-  if (!request || request.status !== "pending") return;
+function setWithdrawReviewLoading() {
+  if (els.withdrawReviewSummary) {
+    els.withdrawReviewSummary.replaceChildren(createDetailItem("상태", "불러오는 중입니다."));
+  }
+  setTableLoading(els.withdrawReviewPurchaseBody, 5);
+  setTableLoading(els.withdrawReviewLedgerBody, 4);
+}
+
+function renderWithdrawReviewPurchases(rows) {
+  if (!els.withdrawReviewPurchaseBody) return;
+  if (!rows.length) {
+    setTableMessage(els.withdrawReviewPurchaseBody, 5, "최근 승인 매입 내역이 없습니다.");
+    return;
+  }
+
+  els.withdrawReviewPurchaseBody.replaceChildren(
+    ...rows.map((row) => {
+      const tr = document.createElement("tr");
+      const giftcardName = row.giftcard_name_snapshot || row.giftcard_type || "-";
+      const approvedAt = row.approved_at || row.reviewed_at;
+      tr.innerHTML = `
+        <td>${escapeHtml(row.receipt_no || "-")}</td>
+        <td>${escapeHtml(giftcardName)}</td>
+        <td class="is-count">${formatNumber(row.item_count || 0)}건</td>
+        <td class="is-amount">${formatWon(row.approved_settlement_amount ?? row.expected_settlement_amount)}</td>
+        <td class="is-date">${formatDateTime(approvedAt)}</td>
+      `;
+      return tr;
+    })
+  );
+}
+
+function renderWithdrawReviewLedger(rows) {
+  if (!els.withdrawReviewLedgerBody) return;
+  if (!rows.length) {
+    setTableMessage(els.withdrawReviewLedgerBody, 4, "최근 잔액 변동 내역이 없습니다.");
+    return;
+  }
+
+  els.withdrawReviewLedgerBody.replaceChildren(
+    ...rows.map((row) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="is-date">${formatDateTime(row.created_at)}</td>
+        <td class="is-type">${escapeHtml(formatLedgerType(row.ledger_type))}</td>
+        <td class="is-amount">${formatSignedLedgerAmount(row.amount)}</td>
+        <td>${escapeHtml(row.memo || row.reason || "-")}</td>
+      `;
+      return tr;
+    })
+  );
+}
+
+function renderWithdrawReviewSummary(data) {
+  if (!els.withdrawReviewSummary) return;
+
+  const withdraw = data.withdraw || {};
+  const company = data.company || {};
+  const summary = data.summary || {};
+
+  els.withdrawReviewSummary.replaceChildren(
+    createCompanyDetailItem("업체명", company.id, company.company_name),
+    createDetailItem("현재 잔액", formatWon(company.current_balance)),
+    createDetailItem("출금 신청액", formatWon(withdraw.amount)),
+    createDetailItem("출금 후 예상 잔액", formatWon(summary.projected_balance_after)),
+    createDetailItem("기타 대기 출금 합계", formatWon(summary.other_pending_withdraw_total)),
+    createDetailItem("신청 상태", getStatusLabel(withdraw.status)),
+    createDetailItem("신청시간", formatDateTime(withdraw.created_at))
+  );
+}
+
+function updateWithdrawCompleteFormState() {
+  const isPending = state.selectedWithdrawStatus === "pending";
+  if (els.withdrawModalTitle) {
+    els.withdrawModalTitle.textContent = isPending ? "출금 검토 및 완료 처리" : "출금 신청 상세";
+  }
+  if (els.withdrawModalDesc) {
+    els.withdrawModalDesc.textContent = isPending
+      ? "잔액 형성 이력을 확인한 뒤 하단에서 출금 완료 처리하세요."
+      : "처리가 완료되었거나 반려된 출금신청입니다.";
+  }
+  if (els.withdrawAdminMemo) {
+    els.withdrawAdminMemo.disabled = !isPending;
+  }
+  if (els.withdrawCompleteButton) {
+    els.withdrawCompleteButton.disabled = !isPending;
+    els.withdrawCompleteButton.hidden = !isPending;
+  }
+  if (els.withdrawReadonlyNote) {
+    els.withdrawReadonlyNote.hidden = isPending;
+  }
+}
+
+async function openWithdrawReviewModal(withdrawRequestId, options = {}) {
+  if (!withdrawRequestId || !els.withdrawModal) return;
 
   state.selectedWithdrawRequestId = withdrawRequestId;
+  state.selectedWithdrawStatus = "";
   els.withdrawModal.hidden = false;
-  els.withdrawAdminMemo.value = "";
-  els.withdrawDetailGrid.replaceChildren(
-    createCompanyDetailItem("업체명", request.company_id, request.company_name),
-    createDetailItem("신청금액", formatWon(request.amount)),
-    createDetailItem("상태", getStatusLabel(request.status)),
-    createDetailItem("신청시간", formatDateTime(request.created_at))
-  );
+  if (els.withdrawAdminMemo) els.withdrawAdminMemo.value = "";
+  setWithdrawReviewLoading();
+  updateWithdrawCompleteFormState();
+
+  try {
+    const data = await apiGet(`/admin/seumbiz/withdraw-requests/${encodeURIComponent(withdrawRequestId)}/review`);
+    state.selectedWithdrawStatus = data.withdraw?.status || "";
+    if (els.withdrawAdminMemo) {
+      els.withdrawAdminMemo.value =
+        state.selectedWithdrawStatus === "pending" ? "" : data.withdraw?.admin_memo || "";
+    }
+    renderWithdrawReviewSummary(data);
+    renderWithdrawReviewPurchases(data.recentApprovedPurchases || []);
+    renderWithdrawReviewLedger(data.recentLedger || []);
+    updateWithdrawCompleteFormState();
+
+    if (options.scrollToComplete && els.withdrawCompleteSection) {
+      window.requestAnimationFrame(() => {
+        els.withdrawCompleteSection.scrollIntoView({ behavior: "smooth", block: "end" });
+      });
+    }
+  } catch (error) {
+    if (els.withdrawReviewSummary) {
+      els.withdrawReviewSummary.replaceChildren(
+        createDetailItem("오류", error.message || "출금 검토 정보를 불러오지 못했습니다.")
+      );
+    }
+    setTableMessage(els.withdrawReviewPurchaseBody, 5, "승인 매입 내역을 불러오지 못했습니다.");
+    setTableMessage(els.withdrawReviewLedgerBody, 4, "잔액 변동 내역을 불러오지 못했습니다.");
+    if (els.withdrawCompleteButton) els.withdrawCompleteButton.disabled = true;
+  }
 }
 
 function closeWithdrawModal() {
   els.withdrawModal.hidden = true;
   state.selectedWithdrawRequestId = "";
+  state.selectedWithdrawStatus = "";
 }
 
 async function handleCompleteWithdraw(event) {
   event.preventDefault();
-  if (!state.selectedWithdrawRequestId) return;
+  if (!state.selectedWithdrawRequestId || state.selectedWithdrawStatus !== "pending") return;
 
   els.withdrawCompleteButton.disabled = true;
   els.withdrawCompleteButton.textContent = "처리 중";
@@ -3425,6 +3565,12 @@ function getStatusLabel(status) {
 
 function formatWon(value) {
   return `${formatNumber(value)}원`;
+}
+
+function formatSignedLedgerAmount(value) {
+  const number = Number(value || 0);
+  if (!Number.isFinite(number) || number === 0) return "0원";
+  return `${number > 0 ? "+" : "-"}${formatNumber(Math.abs(number))}원`;
 }
 
 function formatNumber(value) {
