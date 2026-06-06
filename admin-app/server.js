@@ -3756,7 +3756,13 @@ async function handleSeumBizWithdrawRequestReview(req, res, withdrawRequestId) {
       (sum, row) => sum + normalizeNumber(row.amount, 0),
       0
     );
-    const isPrepaidSettlement = currentBalance < 0;
+    const canComplete = currentBalance >= 0 && withdrawAmount <= currentBalance;
+    const blockReason =
+      currentBalance < 0
+        ? "negative_balance"
+        : withdrawAmount > currentBalance
+          ? "insufficient_balance"
+          : null;
 
     sendJson(res, 200, {
       ok: true,
@@ -3774,13 +3780,14 @@ async function handleSeumBizWithdrawRequestReview(req, res, withdrawRequestId) {
         current_balance: currentBalance
       },
       summary: {
-        processing_mode: isPrepaidSettlement ? "prepaid_settlement" : "withdraw_completed",
-        projected_label: isPrepaidSettlement ? "상계 후 예상 잔액" : "출금 후 예상 잔액",
-        processing_label: isPrepaidSettlement ? "선지급 상계" : "출금 완료",
-        projected_balance_after: isPrepaidSettlement
-          ? currentBalance + withdrawAmount
-          : currentBalance - withdrawAmount,
-        other_pending_withdraw_total: otherPendingTotal
+        processing_mode: "withdraw_completed",
+        projected_label: "출금 후 예상 잔액",
+        processing_label: "출금 완료",
+        projected_balance_after: currentBalance - withdrawAmount,
+        other_pending_withdraw_total: otherPendingTotal,
+        available_withdraw_amount: Math.max(0, currentBalance - otherPendingTotal),
+        can_complete: canComplete,
+        block_reason: blockReason
       },
       recentApprovedPurchases: recentPurchases || [],
       recentLedger: recentLedger || []

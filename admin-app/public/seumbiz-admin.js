@@ -18,6 +18,7 @@ const state = {
   selectedPurchaseRequest: null,
   selectedWithdrawRequestId: "",
   selectedWithdrawStatus: "",
+  withdrawReviewCanComplete: false,
   selectedPurchaseReceiptNo: "",
   selectedPurchaseRate: 0,
   selectedPurchasePinRows: [],
@@ -191,7 +192,6 @@ const els = {
   withdrawAdminMemo: document.querySelector("#withdrawAdminMemo"),
   withdrawReadonlyNote: document.querySelector("#withdrawReadonlyNote"),
   withdrawNegativeBalanceNote: document.querySelector("#withdrawNegativeBalanceNote"),
-  withdrawPrepaidSettlementNote: document.querySelector("#withdrawPrepaidSettlementNote"),
   giftcardBody: document.querySelector("#giftcardBody"),
   giftcardOpenCreateButton: document.querySelector("#giftcardOpenCreateButton"),
   giftcardModal: document.querySelector("#giftcardModal"),
@@ -3176,13 +3176,20 @@ function renderWithdrawReviewLedger(rows) {
 function getWithdrawReviewDisplay(currentBalance, withdrawAmount, summary = {}) {
   const balance = Number(currentBalance || 0);
   const amount = Number(withdrawAmount || 0);
-  const isPrepaidSettlement = balance < 0 || summary.processing_mode === "prepaid_settlement";
+  const canComplete =
+    typeof summary.can_complete === "boolean"
+      ? summary.can_complete
+      : balance >= 0 && amount <= balance;
+  const blockReason =
+    summary.block_reason ||
+    (balance < 0 ? "negative_balance" : amount > balance ? "insufficient_balance" : null);
 
   return {
-    isPrepaidSettlement,
-    projectedBalance: isPrepaidSettlement ? balance + amount : balance - amount,
-    projectedLabel: isPrepaidSettlement ? "상계 후 예상 잔액" : "출금 후 예상 잔액",
-    processingLabel: isPrepaidSettlement ? "선지급 상계" : "출금 완료",
+    projectedBalance: balance - amount,
+    projectedLabel: "출금 후 예상 잔액",
+    processingLabel: "출금 완료",
+    canComplete,
+    blockReason,
   };
 }
 
@@ -3193,7 +3200,9 @@ function renderWithdrawReviewSummary(data) {
   const company = data.company || {};
   const summary = data.summary || {};
   const reviewDisplay = getWithdrawReviewDisplay(company.current_balance, withdraw.amount, summary);
-  const { isPrepaidSettlement, projectedBalance, projectedLabel, processingLabel } = reviewDisplay;
+  const { projectedBalance, projectedLabel, processingLabel, canComplete, blockReason } = reviewDisplay;
+
+  state.withdrawReviewCanComplete = canComplete;
 
   els.withdrawReviewSummary.replaceChildren(
     createCompanyDetailItem("업체명", company.id, company.company_name),
@@ -3210,16 +3219,25 @@ function renderWithdrawReviewSummary(data) {
   );
 
   if (els.withdrawNegativeBalanceNote) {
-    els.withdrawNegativeBalanceNote.hidden = true;
+    if (blockReason === "negative_balance") {
+      els.withdrawNegativeBalanceNote.hidden = false;
+      els.withdrawNegativeBalanceNote.textContent =
+        "업체 잔액이 마이너스입니다. 출금 완료 처리가 불가합니다. 반려 처리 후 매입 승인으로 선지급금을 상계해 주세요.";
+    } else if (blockReason === "insufficient_balance") {
+      els.withdrawNegativeBalanceNote.hidden = false;
+      els.withdrawNegativeBalanceNote.textContent =
+        "신청 금액이 현재 잔액을 초과합니다. 출금 완료 처리가 불가합니다. 반려 후 업체에 재신청을 안내해 주세요.";
+    } else {
+      els.withdrawNegativeBalanceNote.hidden = true;
+    }
   }
 
-  if (els.withdrawPrepaidSettlementNote) {
-    els.withdrawPrepaidSettlementNote.hidden = !isPrepaidSettlement;
-  }
+  updateWithdrawCompleteFormState();
 }
 
 function updateWithdrawCompleteFormState() {
   const isPending = state.selectedWithdrawStatus === "pending";
+  const canComplete = isPending && state.withdrawReviewCanComplete === true;
   if (els.withdrawModalTitle) {
     els.withdrawModalTitle.textContent = isPending ? "출금 검토 및 완료 처리" : "출금 신청 상세";
   }
@@ -3232,7 +3250,7 @@ function updateWithdrawCompleteFormState() {
     els.withdrawAdminMemo.disabled = !isPending;
   }
   if (els.withdrawCompleteButton) {
-    els.withdrawCompleteButton.disabled = !isPending;
+    els.withdrawCompleteButton.disabled = !canComplete;
     els.withdrawCompleteButton.hidden = !isPending;
   }
   if (els.withdrawReadonlyNote) {
@@ -3245,6 +3263,7 @@ async function openWithdrawReviewModal(withdrawRequestId, options = {}) {
 
   state.selectedWithdrawRequestId = withdrawRequestId;
   state.selectedWithdrawStatus = "";
+  state.withdrawReviewCanComplete = false;
   els.withdrawModal.hidden = false;
   if (els.withdrawAdminMemo) els.withdrawAdminMemo.value = "";
   setWithdrawReviewLoading();
@@ -3283,6 +3302,7 @@ function closeWithdrawModal() {
   els.withdrawModal.hidden = true;
   state.selectedWithdrawRequestId = "";
   state.selectedWithdrawStatus = "";
+  state.withdrawReviewCanComplete = false;
 }
 
 async function handleCompleteWithdraw(event) {

@@ -2533,6 +2533,17 @@ tbody tr:hover {
   font-weight: 800;
 }
 
+.sb-withdraw-review-summary .sb-detail-item strong .is-positive-balance {
+  color: #087443;
+  font-weight: 800;
+}
+
+.sb-withdraw-prepaid-note {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+}
+
 .sb-withdraw-review-section {
   width: 100%;
 }

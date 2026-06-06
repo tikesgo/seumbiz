@@ -16,6 +16,7 @@ const STATUS_BADGE_CLASSES = {
 };
 
 let currentBalance = 0;
+let pendingWithdrawTotal = 0;
 let isSubmitting = false;
 let pendingWithdrawAmount = 0;
 let withdrawRecentRequestId = 0;
@@ -29,8 +30,9 @@ const recentList = $("#withdrawRecentList");
 const balanceSummary = $(".withdraw-balance-summary strong");
 const currentBalanceInline = $("[data-withdraw-current-balance]");
 const projectedBalanceInline = $("[data-withdraw-projected-balance]");
-const projectedBalanceLabel = $("[data-withdraw-projected-label]");
-const prepaidSettlementNote = $("#withdrawPrepaidSettlementNote");
+const availableAmountInline = $("[data-withdraw-available-amount]");
+const availableNote = $("#withdrawAvailableNote");
+const negativeBlockedNote = $("#withdrawNegativeBlockedNote");
 const alertModal = $("#withdrawAlertModal");
 const alertTitle = $("#withdrawAlertTitle");
 const alertMessage = $("#withdrawAlertMessage");
@@ -70,6 +72,23 @@ const setStatus = (message, type = "") => {
   statusElement.dataset.state = type;
 };
 
+const getAvailableWithdrawAmount = () => {
+  if (currentBalance < 0) return 0;
+  return Math.max(0, currentBalance - pendingWithdrawTotal);
+};
+
+const buildAmountDetailHtml = (items) =>
+  `<dl>${items
+    .map(
+      (item) => `
+        <div>
+          <dt>${escapeHtml(item.label)}</dt>
+          <dd>${escapeHtml(item.value)}</dd>
+        </div>
+      `,
+    )
+    .join("")}</dl>`;
+
 const openWithdrawAlert = ({ title, message, detail = "" }) => {
   if (!alertModal || !alertTitle || !alertMessage || !alertDetail) {
     setStatus(message, "error");
@@ -101,8 +120,8 @@ const setConfirmSubmitting = (value) => {
 
 const setSubmitting = (value) => {
   isSubmitting = value;
+  updateWithdrawFormState();
   if (!submitButton) return;
-  submitButton.disabled = value;
   submitButton.lastChild.textContent = value ? " 출금 신청 중..." : " 출금 신청하기";
 };
 
@@ -123,27 +142,53 @@ const setRecentMessage = (message, type = "empty") => {
   recentList.innerHTML = `<p class="withdraw-recent-state withdraw-recent-state--${type}">${escapeHtml(message)}</p>`;
 };
 
+const updateWithdrawFormState = () => {
+  const isNegativeBalance = currentBalance < 0;
+  const availableAmount = getAvailableWithdrawAmount();
+  const canSubmit = !isNegativeBalance && availableAmount >= 10000 && !isSubmitting;
+
+  if (negativeBlockedNote) {
+    negativeBlockedNote.hidden = !isNegativeBalance;
+  }
+
+  if (availableNote) {
+    availableNote.hidden = isNegativeBalance || pendingWithdrawTotal <= 0;
+  }
+
+  if (availableAmountInline) {
+    availableAmountInline.textContent = formatMoney(availableAmount);
+  }
+
+  if (amountInput) {
+    amountInput.disabled = isNegativeBalance || isSubmitting;
+  }
+
+  if (submitButton) {
+    submitButton.disabled = !canSubmit;
+  }
+
+  document.querySelectorAll("[data-withdraw-amount], [data-withdraw-correct]").forEach((button) => {
+    button.disabled = isNegativeBalance || isSubmitting;
+  });
+};
+
 const updateBalance = () => {
   const authContext = window.SEUMBizAuth;
   currentBalance = Number(authContext?.balanceAmount || 0);
   if (balanceSummary) balanceSummary.textContent = formatMoney(currentBalance);
   if (currentBalanceInline) currentBalanceInline.textContent = formatMoney(currentBalance);
   updateProjectedBalance();
+  updateWithdrawFormState();
 };
 
-const isPrepaidSettlementMode = () => currentBalance < 0;
-
 const getWithdrawConfirmDisplay = (amount) => {
-  const current = Number(currentBalance) || 0;
-  const requestAmount = Number(amount) || 0;
-  const prepaid = current < 0;
+  const availableAmount = getAvailableWithdrawAmount();
   return {
-    processingType: prepaid ? "선지급 상계" : "출금신청",
-    projectedLabel: prepaid ? "상계 후 예상 잔액" : "출금신청 후 예상 잔액",
-    projectedBalance: prepaid ? current + requestAmount : current - requestAmount,
-    notice: prepaid
-      ? "선지급금 상계 신청입니다. 실제 추가 지급이 아닙니다."
-      : "신청 확정 후 관리자 확인을 거쳐 처리됩니다.",
+    processingType: "출금신청",
+    projectedLabel: "출금신청 후 예상 잔액",
+    projectedBalance: currentBalance - amount,
+    notice: "신청 확정 후 관리자 확인을 거쳐 처리됩니다.",
+    availableAmount,
   };
 };
 
@@ -154,25 +199,24 @@ const openWithdrawConfirm = (amount) => {
   pendingWithdrawAmount = amount;
 
   confirmNotice.textContent = display.notice;
-  confirmDetail.innerHTML = `
-    <dl>
-      ${[
-        { label: "현재 업체 잔액", value: formatMoney(currentBalance) },
-        { label: "신청 금액", value: formatMoney(amount) },
-        { label: display.projectedLabel, value: formatMoney(display.projectedBalance) },
-        { label: "처리 유형", value: display.processingType },
-      ]
-        .map(
-          (item) => `
-            <div>
-              <dt>${escapeHtml(item.label)}</dt>
-              <dd>${escapeHtml(item.value)}</dd>
-            </div>
-          `,
-        )
-        .join("")}
-    </dl>
-  `;
+  const detailItems = [
+    { label: "현재 업체 잔액", value: formatMoney(currentBalance) },
+  ];
+
+  if (pendingWithdrawTotal > 0) {
+    detailItems.push(
+      { label: "대기 중 출금 합계", value: formatMoney(pendingWithdrawTotal) },
+      { label: "출금 가능 금액", value: formatMoney(display.availableAmount) },
+    );
+  }
+
+  detailItems.push(
+    { label: "신청 금액", value: formatMoney(amount) },
+    { label: display.projectedLabel, value: formatMoney(display.projectedBalance) },
+    { label: "처리 유형", value: display.processingType },
+  );
+
+  confirmDetail.innerHTML = buildAmountDetailHtml(detailItems);
 
   setConfirmSubmitting(false);
   confirmModal.hidden = false;
@@ -192,17 +236,13 @@ const closeWithdrawConfirm = () => {
 };
 
 const updateProjectedBalance = () => {
-  const prepaidMode = isPrepaidSettlementMode();
-
-  if (projectedBalanceLabel) {
-    projectedBalanceLabel.textContent = prepaidMode ? "상계 후 예상 잔액" : "출금 후 예상 잔액";
-  }
-
-  if (prepaidSettlementNote) {
-    prepaidSettlementNote.hidden = !prepaidMode;
-  }
-
   if (!projectedBalanceInline) return;
+
+  if (currentBalance < 0) {
+    projectedBalanceInline.textContent = "-";
+    projectedBalanceInline.classList.remove("is-negative", "is-positive");
+    return;
+  }
 
   const amount = getAmount();
   const hasValidAmount = amount !== null && amount > 0;
@@ -213,7 +253,7 @@ const updateProjectedBalance = () => {
     return;
   }
 
-  const projectedBalance = prepaidMode ? currentBalance + amount : currentBalance - amount;
+  const projectedBalance = currentBalance - amount;
   projectedBalanceInline.textContent = formatMoney(projectedBalance);
   projectedBalanceInline.classList.toggle("is-negative", projectedBalance < 0);
   projectedBalanceInline.classList.toggle("is-positive", projectedBalance > 0);
@@ -246,6 +286,28 @@ const renderRecentRequests = (rows) => {
       `;
     })
     .join("");
+};
+
+const loadPendingWithdrawTotal = async () => {
+  const authContext = window.SEUMBizAuth;
+  if (!supabase || !authContext?.companyId) {
+    pendingWithdrawTotal = 0;
+    updateWithdrawFormState();
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("biz_withdraw_requests")
+    .select("amount")
+    .eq("company_id", authContext.companyId)
+    .eq("status", "pending");
+
+  pendingWithdrawTotal = error
+    ? 0
+    : (data || []).reduce((sum, row) => sum + Number(row.amount || 0), 0);
+
+  updateProjectedBalance();
+  updateWithdrawFormState();
 };
 
 const loadRecentRequests = async () => {
@@ -306,6 +368,13 @@ const notifyWithdrawRequestTelegram = async (row) => {
 };
 
 const validateAmount = (amount) => {
+  if (currentBalance < 0) {
+    return {
+      title: "출금 신청 불가",
+      message: "선지급금(마이너스 잔액) 상태에서는 출금 신청할 수 없습니다. 매입 승인 시 자동으로 상계됩니다.",
+    };
+  }
+
   if (!amount || amount <= 0) {
     return {
       title: "출금 금액 확인",
@@ -317,6 +386,23 @@ const validateAmount = (amount) => {
     return {
       title: "출금 신청 불가",
       message: "최소 출금 가능 금액은 10,000원입니다.",
+    };
+  }
+
+  const availableAmount = getAvailableWithdrawAmount();
+  if (amount > availableAmount) {
+    const detailItems = [{ label: "현재 잔액", value: formatMoney(currentBalance) }];
+    if (pendingWithdrawTotal > 0) {
+      detailItems.push(
+        { label: "대기 중 출금 합계", value: formatMoney(pendingWithdrawTotal) },
+        { label: "출금 가능 금액", value: formatMoney(availableAmount) },
+      );
+    }
+
+    return {
+      title: "출금 신청 불가",
+      message: "신청 금액이 출금 가능 금액을 초과했습니다.",
+      detail: buildAmountDetailHtml(detailItems),
     };
   }
 
@@ -348,6 +434,7 @@ const submitWithdrawRequest = async (amount) => {
     closeWithdrawConfirm();
     setStatus(`출금 신청이 접수되었습니다. 신청 금액: ${formatMoney(row?.amount || amount)}`, "ok");
     if (amountInput) amountInput.value = "";
+    await loadPendingWithdrawTotal();
     updateProjectedBalance();
     await loadRecentRequests();
   } catch (error) {
@@ -383,6 +470,7 @@ const handleConfirmSubmit = async () => {
 document.addEventListener("click", (event) => {
   const amountButton = event.target.closest("[data-withdraw-amount]");
   if (amountButton) {
+    if (currentBalance < 0 || amountButton.disabled) return;
     setAmount((getAmount() || 0) + Number(amountButton.dataset.withdrawAmount || 0));
     updateProjectedBalance();
     setStatus("", "");
@@ -391,13 +479,13 @@ document.addEventListener("click", (event) => {
 
   const correctButton = event.target.closest("[data-withdraw-correct]");
   if (correctButton) {
+    if (currentBalance < 0 || correctButton.disabled) return;
     if (amountInput) amountInput.value = "";
     updateProjectedBalance();
     setStatus("", "");
     amountInput?.focus();
     return;
   }
-
 });
 
 amountInput?.addEventListener("input", () => {
@@ -432,11 +520,12 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-const initWithdraw = () => {
+const initWithdraw = async () => {
   if (withdrawInitialized || !window.SEUMBizAuth?.companyId) return;
   withdrawInitialized = true;
   updateBalance();
-  loadRecentRequests();
+  await loadPendingWithdrawTotal();
+  await loadRecentRequests();
 };
 
 document.addEventListener("seumbiz:auth-ready", initWithdraw);

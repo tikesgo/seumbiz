@@ -4259,6 +4259,40 @@
   text-align: right;
 }
 
+.withdraw-blocked-note {
+  margin: 10px 2px 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #fef3f2;
+  border: 1px solid #fecdca;
+  color: #b42318;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.withdraw-available-note {
+  margin: 8px 2px 0;
+  color: #344054;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.withdraw-available-note strong {
+  color: #155eef;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.withdraw-available-note small {
+  display: block;
+  margin-top: 4px;
+  color: #98a2b3;
+  font-size: 11px;
+  font-weight: 650;
+}
+
 .withdraw-projected-balance small {
   flex: 0 0 100%;
   color: #98a2b3;

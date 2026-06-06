@@ -136,6 +136,7 @@ create table if not exists public.biz_balance_ledger (
     ledger_type in (
       'purchase_approved',
       'withdraw_completed',
+      'prepaid_settlement',
       'admin_deduct',
       'admin_advance',
       'admin_restore',
@@ -152,6 +153,9 @@ create table if not exists public.biz_balance_ledger (
   ),
   constraint biz_balance_ledger_withdraw_negative check (
     ledger_type <> 'withdraw_completed' or amount < 0
+  ),
+  constraint biz_balance_ledger_prepaid_settlement_positive check (
+    ledger_type <> 'prepaid_settlement' or amount > 0
   ),
   constraint biz_balance_ledger_deduct_negative check (
     ledger_type <> 'admin_deduct' or amount < 0
@@ -218,10 +222,10 @@ create unique index if not exists uq_ledger_purchase_approved_once
 on public.biz_balance_ledger (purchase_request_id)
 where ledger_type = 'purchase_approved'
   and purchase_request_id is not null;
-create unique index if not exists uq_ledger_withdraw_completed_once
+create unique index if not exists uq_ledger_withdraw_request_once
 on public.biz_balance_ledger (withdraw_request_id)
-where ledger_type = 'withdraw_completed'
-  and withdraw_request_id is not null;
+where withdraw_request_id is not null
+  and ledger_type in ('withdraw_completed', 'prepaid_settlement');
 create index if not exists idx_biz_withdraw_requests_company_id on public.biz_withdraw_requests(company_id);
 create index if not exists idx_biz_withdraw_requests_status on public.biz_withdraw_requests(status);
 create index if not exists idx_biz_admin_logs_company_id on public.biz_admin_logs(company_id);

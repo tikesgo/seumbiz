@@ -592,6 +592,8 @@ declare
   v_company_id uuid;
   v_amount numeric(14,0);
   v_current_balance numeric(14,0);
+  v_pending_withdraw_total numeric(14,0);
+  v_available_amount numeric(14,0);
   v_withdraw_request_id uuid;
 begin
   if v_auth_user_id is null then
@@ -622,10 +624,30 @@ begin
     raise exception 'amount must be greater than 0';
   end if;
 
+  if v_amount < 10000 then
+    raise exception 'Minimum withdraw amount is 10,000';
+  end if;
+
   select coalesce(sum(l.amount), 0)::numeric(14,0)
     into v_current_balance
   from public.biz_balance_ledger l
   where l.company_id = v_company_id;
+
+  if v_current_balance < 0 then
+    raise exception 'Withdraw request is not allowed while company balance is negative';
+  end if;
+
+  select coalesce(sum(wr.amount), 0)::numeric(14,0)
+    into v_pending_withdraw_total
+  from public.biz_withdraw_requests wr
+  where wr.company_id = v_company_id
+    and wr.status = 'pending';
+
+  v_available_amount := (v_current_balance - v_pending_withdraw_total)::numeric(14,0);
+
+  if v_amount > v_available_amount then
+    raise exception 'Withdraw amount exceeds available balance';
+  end if;
 
   insert into public.biz_withdraw_requests (
     company_id,
@@ -654,7 +676,7 @@ end;
 $$;
 
 comment on function public.create_withdraw_request(numeric, text)
-is 'Creates a pending withdraw request without changing the balance ledger. Intended for approved company users.';
+is 'Creates a pending withdraw request. Requires non-negative balance and amount <= current balance minus other pending withdraws. Minimum 10,000.';
 
 revoke all on function public.create_withdraw_request(numeric, text) from public;
 revoke all on function public.create_withdraw_request(numeric, text) from anon;
@@ -683,6 +705,7 @@ declare
   v_withdraw public.biz_withdraw_requests%rowtype;
   v_current_balance numeric(14,0);
   v_ledger_id uuid;
+  v_balance_after numeric(14,0);
 begin
   if v_admin_auth_user_id is null then
     raise exception 'Authentication required';
@@ -729,6 +752,16 @@ begin
   from public.biz_balance_ledger l
   where l.company_id = v_withdraw.company_id;
 
+  if v_current_balance < 0 then
+    raise exception 'Withdraw completion is not allowed while company balance is negative';
+  end if;
+
+  if v_withdraw.amount > v_current_balance then
+    raise exception 'Withdraw amount exceeds current balance';
+  end if;
+
+  v_balance_after := (v_current_balance - v_withdraw.amount)::numeric(14,0);
+
   update public.biz_withdraw_requests
   set
     status = 'completed',
@@ -750,7 +783,7 @@ begin
   values (
     v_withdraw.company_id,
     v_withdraw.id,
-    -v_withdraw.amount,
+    (-v_withdraw.amount)::numeric(14,0),
     'withdraw_completed',
     'Withdraw completed',
     p_admin_memo,
@@ -782,7 +815,9 @@ begin
     jsonb_build_object(
       'status', 'completed',
       'amount', v_withdraw.amount,
-      'balance_after', (v_current_balance - v_withdraw.amount)::numeric(14,0),
+      'ledger_type', 'withdraw_completed',
+      'ledger_amount', (-v_withdraw.amount)::numeric(14,0),
+      'balance_after', v_balance_after,
       'ledger_id', v_ledger_id
     ),
     p_admin_memo
@@ -794,13 +829,13 @@ begin
     v_withdraw.company_id,
     v_withdraw.amount,
     v_current_balance,
-    (v_current_balance - v_withdraw.amount)::numeric(14,0),
+    v_balance_after,
     v_ledger_id;
 end;
 $$;
 
 comment on function public.complete_withdraw_request(uuid, text)
-is 'Completes a pending withdraw request and creates a withdraw_completed negative balance ledger row in one transaction. Intended for admin users.';
+is 'Completes a pending withdraw request with withdraw_completed (-amount). Requires non-negative balance and amount <= current balance. Intended for admin users.';
 
 revoke all on function public.complete_withdraw_request(uuid, text) from public;
 revoke all on function public.complete_withdraw_request(uuid, text) from anon;
@@ -941,6 +976,7 @@ alter table public.biz_balance_ledger
     ledger_type in (
       'purchase_approved',
       'withdraw_completed',
+      'prepaid_settlement',
       'admin_deduct',
       'admin_advance',
       'admin_restore',
@@ -949,6 +985,13 @@ alter table public.biz_balance_ledger
       'manual_debit'
     )
   );
+
+alter table public.biz_balance_ledger
+  drop constraint if exists biz_balance_ledger_prepaid_settlement_positive;
+
+alter table public.biz_balance_ledger
+  add constraint biz_balance_ledger_prepaid_settlement_positive
+  check (ledger_type <> 'prepaid_settlement' or amount > 0);
 
 alter table public.biz_balance_ledger
   drop constraint if exists biz_balance_ledger_manual_credit_positive;
