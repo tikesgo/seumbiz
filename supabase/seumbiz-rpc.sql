@@ -627,10 +627,6 @@ begin
   from public.biz_balance_ledger l
   where l.company_id = v_company_id;
 
-  if v_amount > v_current_balance then
-    raise exception 'amount exceeds current balance';
-  end if;
-
   insert into public.biz_withdraw_requests (
     company_id,
     requested_by,
@@ -732,10 +728,6 @@ begin
     into v_current_balance
   from public.biz_balance_ledger l
   where l.company_id = v_withdraw.company_id;
-
-  if v_current_balance < v_withdraw.amount then
-    raise exception 'current balance is less than withdraw amount';
-  end if;
 
   update public.biz_withdraw_requests
   set

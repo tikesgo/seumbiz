@@ -2521,10 +2521,16 @@ tbody tr:hover {
 }
 
 .sb-withdraw-review-summary .sb-detail-item {
+  min-width: 0;
   min-height: 58px;
   gap: 4px;
   padding: 10px 11px;
   border-radius: 12px;
+}
+
+.sb-withdraw-review-summary .sb-detail-item strong .is-negative-balance {
+  color: #be123c;
+  font-weight: 800;
 }
 
 .sb-withdraw-review-section {

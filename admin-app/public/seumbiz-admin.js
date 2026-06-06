@@ -190,6 +190,7 @@ const els = {
   withdrawCompleteButton: document.querySelector("#withdrawCompleteButton"),
   withdrawAdminMemo: document.querySelector("#withdrawAdminMemo"),
   withdrawReadonlyNote: document.querySelector("#withdrawReadonlyNote"),
+  withdrawNegativeBalanceNote: document.querySelector("#withdrawNegativeBalanceNote"),
   giftcardBody: document.querySelector("#giftcardBody"),
   giftcardOpenCreateButton: document.querySelector("#giftcardOpenCreateButton"),
   giftcardModal: document.querySelector("#giftcardModal"),
@@ -3176,16 +3177,25 @@ function renderWithdrawReviewSummary(data) {
   const withdraw = data.withdraw || {};
   const company = data.company || {};
   const summary = data.summary || {};
+  const projectedBalance = Number(summary.projected_balance_after || 0);
+  const isNegativeProjected = Number.isFinite(projectedBalance) && projectedBalance < 0;
 
   els.withdrawReviewSummary.replaceChildren(
     createCompanyDetailItem("업체명", company.id, company.company_name),
     createDetailItem("현재 잔액", formatWon(company.current_balance)),
     createDetailItem("출금 신청액", formatWon(withdraw.amount)),
-    createDetailItem("출금 후 예상 잔액", formatWon(summary.projected_balance_after)),
+    createDetailHtmlItem(
+      "출금 후 예상 잔액",
+      `<span class="${isNegativeProjected ? "is-negative-balance" : ""}">${formatWon(projectedBalance)}</span>`
+    ),
     createDetailItem("기타 대기 출금 합계", formatWon(summary.other_pending_withdraw_total)),
     createDetailItem("신청 상태", getStatusLabel(withdraw.status)),
     createDetailItem("신청시간", formatDateTime(withdraw.created_at))
   );
+
+  if (els.withdrawNegativeBalanceNote) {
+    els.withdrawNegativeBalanceNote.hidden = !isNegativeProjected;
+  }
 }
 
 function updateWithdrawCompleteFormState() {

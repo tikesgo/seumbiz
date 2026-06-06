@@ -27,6 +27,7 @@ const statusElement = $("#withdrawRequestStatus");
 const recentList = $("#withdrawRecentList");
 const balanceSummary = $(".withdraw-balance-summary strong");
 const currentBalanceInline = $("[data-withdraw-current-balance]");
+const projectedBalanceInline = $("[data-withdraw-projected-balance]");
 const alertModal = $("#withdrawAlertModal");
 const alertTitle = $("#withdrawAlertTitle");
 const alertMessage = $("#withdrawAlertMessage");
@@ -112,6 +113,24 @@ const updateBalance = () => {
   currentBalance = Number(authContext?.balanceAmount || 0);
   if (balanceSummary) balanceSummary.textContent = formatMoney(currentBalance);
   if (currentBalanceInline) currentBalanceInline.textContent = formatMoney(currentBalance);
+  updateProjectedBalance();
+};
+
+const updateProjectedBalance = () => {
+  if (!projectedBalanceInline) return;
+
+  const amount = getAmount();
+  const hasValidAmount = amount !== null && amount > 0;
+
+  if (!hasValidAmount) {
+    projectedBalanceInline.textContent = "-";
+    projectedBalanceInline.classList.remove("is-negative");
+    return;
+  }
+
+  const projectedBalance = currentBalance - amount;
+  projectedBalanceInline.textContent = formatMoney(projectedBalance);
+  projectedBalanceInline.classList.toggle("is-negative", projectedBalance < 0);
 };
 
 const renderRecentRequests = (rows) => {
@@ -215,19 +234,6 @@ const validateAmount = (amount) => {
     };
   }
 
-  if (amount > currentBalance) {
-    return {
-      title: "출금 신청 불가",
-      message: "현재 업체 잔액보다 큰 금액은 출금 신청할 수 없습니다.",
-      detail: `
-        <dl>
-          <div><dt>현재 잔액</dt><dd>${formatMoney(currentBalance)}</dd></div>
-          <div><dt>신청 금액</dt><dd>${formatMoney(amount)}</dd></div>
-        </dl>
-      `,
-    };
-  }
-
   return null;
 };
 
@@ -263,6 +269,7 @@ const handleSubmit = async () => {
     void notifyWithdrawRequestTelegram(row);
     setStatus(`출금 신청이 접수되었습니다. 신청 금액: ${formatMoney(row?.amount || amount)}`, "ok");
     if (amountInput) amountInput.value = "";
+    updateProjectedBalance();
     await loadRecentRequests();
   } catch (error) {
     setStatus(error.message || "출금 신청 등록에 실패했습니다.", "error");
@@ -282,6 +289,7 @@ document.addEventListener("click", (event) => {
   const correctButton = event.target.closest("[data-withdraw-correct]");
   if (correctButton) {
     if (amountInput) amountInput.value = "";
+    updateProjectedBalance();
     setStatus("", "");
     amountInput?.focus();
     return;
@@ -289,7 +297,10 @@ document.addEventListener("click", (event) => {
 
 });
 
-amountInput?.addEventListener("input", () => setStatus("", ""));
+amountInput?.addEventListener("input", () => {
+  updateProjectedBalance();
+  setStatus("", "");
+});
 submitButton?.addEventListener("click", handleSubmit);
 
 alertModal?.addEventListener("click", (event) => {
