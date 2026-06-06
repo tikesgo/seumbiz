@@ -934,10 +934,39 @@
           <button class="sb-icon-button" type="button" data-close-withdraw-modal aria-label="닫기">×</button>
         </header>
 
-        <div class="sb-detail-grid sb-withdraw-review-summary" id="withdrawReviewSummary"></div>
-        <p class="sb-company-negative-warning" id="withdrawNegativeBalanceNote" hidden>
-          출금 완료 처리가 불가합니다. 반려 처리 후 매입 승인으로 선지급금을 상계해 주세요.
-        </p>
+        <div class="sb-withdraw-review-meta" id="withdrawReviewMeta"></div>
+
+        <div class="sb-summary-grid sb-withdraw-flow-grid" id="withdrawReviewFlowCards" aria-label="잔액 흐름"></div>
+
+        <div class="sb-withdraw-risk-signals" id="withdrawReviewRiskSignals" hidden aria-label="위험 신호"></div>
+
+        <section class="sb-modal-section sb-withdraw-review-section">
+          <div class="sb-withdraw-review-section-head">
+            <h3>최근 30일 정산 요약</h3>
+            <span>원장 집계</span>
+          </div>
+          <div class="sb-summary-grid sb-withdraw-ledger30-grid" id="withdrawReviewLedger30Summary"></div>
+        </section>
+
+        <section class="sb-modal-section sb-withdraw-review-section">
+          <div class="sb-withdraw-review-section-head">
+            <h3>최근 출금 신청</h3>
+            <span>최근 5건</span>
+          </div>
+          <div class="sb-modal-table sb-withdraw-review-table">
+            <table>
+              <thead>
+                <tr>
+                  <th class="is-date">신청일</th>
+                  <th class="is-amount">금액</th>
+                  <th class="is-type">상태</th>
+                  <th class="is-date">처리일</th>
+                </tr>
+              </thead>
+              <tbody id="withdrawReviewWithdrawBody"></tbody>
+            </table>
+          </div>
+        </section>
 
         <section class="sb-modal-section sb-withdraw-review-section">
           <div class="sb-withdraw-review-section-head">

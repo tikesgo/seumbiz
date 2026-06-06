@@ -183,7 +183,11 @@ const els = {
   withdrawModal: document.querySelector("#withdrawModal"),
   withdrawModalTitle: document.querySelector("#withdrawModalTitle"),
   withdrawModalDesc: document.querySelector("#withdrawModalDesc"),
-  withdrawReviewSummary: document.querySelector("#withdrawReviewSummary"),
+  withdrawReviewMeta: document.querySelector("#withdrawReviewMeta"),
+  withdrawReviewFlowCards: document.querySelector("#withdrawReviewFlowCards"),
+  withdrawReviewRiskSignals: document.querySelector("#withdrawReviewRiskSignals"),
+  withdrawReviewLedger30Summary: document.querySelector("#withdrawReviewLedger30Summary"),
+  withdrawReviewWithdrawBody: document.querySelector("#withdrawReviewWithdrawBody"),
   withdrawReviewPurchaseBody: document.querySelector("#withdrawReviewPurchaseBody"),
   withdrawReviewLedgerBody: document.querySelector("#withdrawReviewLedgerBody"),
   withdrawCompleteSection: document.querySelector("#withdrawCompleteSection"),
@@ -191,7 +195,6 @@ const els = {
   withdrawCompleteButton: document.querySelector("#withdrawCompleteButton"),
   withdrawAdminMemo: document.querySelector("#withdrawAdminMemo"),
   withdrawReadonlyNote: document.querySelector("#withdrawReadonlyNote"),
-  withdrawNegativeBalanceNote: document.querySelector("#withdrawNegativeBalanceNote"),
   giftcardBody: document.querySelector("#giftcardBody"),
   giftcardOpenCreateButton: document.querySelector("#giftcardOpenCreateButton"),
   giftcardModal: document.querySelector("#giftcardModal"),
@@ -3120,12 +3123,157 @@ function preventNumericInputWheel() {
   );
 }
 
+function createWithdrawSummaryCard(label, valueHtml, { primary = false, help = "" } = {}) {
+  const article = document.createElement("article");
+  article.className = primary ? "sb-summary-card sb-summary-card-primary" : "sb-summary-card";
+  article.innerHTML = `
+    <span>${escapeHtml(label)}</span>
+    <strong>${valueHtml}</strong>
+    ${help ? `<small>${escapeHtml(help)}</small>` : ""}
+  `;
+  return article;
+}
+
 function setWithdrawReviewLoading() {
-  if (els.withdrawReviewSummary) {
-    els.withdrawReviewSummary.replaceChildren(createDetailItem("상태", "불러오는 중입니다."));
+  if (els.withdrawReviewMeta) {
+    els.withdrawReviewMeta.textContent = "출금 검토 정보를 불러오는 중입니다.";
   }
+  if (els.withdrawReviewFlowCards) {
+    els.withdrawReviewFlowCards.replaceChildren(createWithdrawSummaryCard("상태", "불러오는 중"));
+  }
+  if (els.withdrawReviewRiskSignals) {
+    els.withdrawReviewRiskSignals.hidden = true;
+    els.withdrawReviewRiskSignals.replaceChildren();
+  }
+  if (els.withdrawReviewLedger30Summary) {
+    els.withdrawReviewLedger30Summary.replaceChildren(createWithdrawSummaryCard("30일 요약", "불러오는 중"));
+  }
+  setTableLoading(els.withdrawReviewWithdrawBody, 4);
   setTableLoading(els.withdrawReviewPurchaseBody, 5);
   setTableLoading(els.withdrawReviewLedgerBody, 4);
+}
+
+function renderWithdrawReviewMeta(data) {
+  if (!els.withdrawReviewMeta) return;
+
+  const withdraw = data.withdraw || {};
+  const company = data.company || {};
+  els.withdrawReviewMeta.replaceChildren(
+    Object.assign(document.createElement("strong"), {
+      textContent: company.company_name || "-"
+    }),
+    Object.assign(document.createElement("span"), {
+      textContent: `신청 ${formatDateTime(withdraw.created_at)}`
+    }),
+    Object.assign(document.createElement("span"), {
+      textContent: `상태 ${getStatusLabel(withdraw.status)}`
+    })
+  );
+}
+
+function renderWithdrawReviewFlowCards(data) {
+  if (!els.withdrawReviewFlowCards) return;
+
+  const withdraw = data.withdraw || {};
+  const company = data.company || {};
+  const summary = data.summary || {};
+  const reviewDisplay = getWithdrawReviewDisplay(company.current_balance, withdraw.amount, summary);
+  const { projectedBalance } = reviewDisplay;
+  const projectedClass =
+    projectedBalance < 0 ? "is-negative-balance" : projectedBalance > 0 ? "is-positive-balance" : "";
+
+  els.withdrawReviewFlowCards.replaceChildren(
+    createWithdrawSummaryCard("현재 잔액", escapeHtml(formatWon(company.current_balance)), {
+      primary: true,
+      help: "원장 합계 기준"
+    }),
+    createWithdrawSummaryCard(
+      "전체 대기 출금",
+      escapeHtml(formatWon(summary.total_pending_withdraw_total)),
+      {
+        help:
+          Number(summary.other_pending_withdraw_total || 0) > 0
+            ? `다른 대기 ${formatWon(summary.other_pending_withdraw_total)} 포함`
+            : "이번 신청만 대기 중"
+      }
+    ),
+    createWithdrawSummaryCard("이번 신청 금액", escapeHtml(formatWon(withdraw.amount)), {
+      help: "현재 검토 중인 출금"
+    }),
+    createWithdrawSummaryCard(
+      "처리 후 예상 잔액",
+      `<span class="${projectedClass}">${escapeHtml(formatWon(projectedBalance))}</span>`,
+      { help: "출금 완료 시 반영" }
+    )
+  );
+}
+
+function renderWithdrawReviewRiskSignals(signals = []) {
+  if (!els.withdrawReviewRiskSignals) return;
+
+  if (!signals.length) {
+    els.withdrawReviewRiskSignals.hidden = true;
+    els.withdrawReviewRiskSignals.replaceChildren();
+    return;
+  }
+
+  els.withdrawReviewRiskSignals.hidden = false;
+  els.withdrawReviewRiskSignals.replaceChildren(
+    ...signals.map((signal) => {
+      const chip = document.createElement("div");
+      const level = signal.level === "danger" ? "danger" : signal.level === "warning" ? "warning" : "info";
+      chip.className = `sb-withdraw-risk-chip sb-withdraw-risk-chip--${level}`;
+      const detail =
+        signal.code === "has_other_pending" && signal.other_pending_amount
+          ? `${signal.message} (${formatWon(signal.other_pending_amount)})`
+          : signal.message;
+      chip.innerHTML = `<div><strong>${escapeHtml(signal.label)}</strong><span>${escapeHtml(detail)}</span></div>`;
+      return chip;
+    })
+  );
+}
+
+function renderWithdrawReviewLedger30Summary(summary = {}) {
+  if (!els.withdrawReviewLedger30Summary) return;
+
+  els.withdrawReviewLedger30Summary.replaceChildren(
+    createWithdrawSummaryCard("매입 승인", escapeHtml(formatWon(summary.purchase_approved_total)), {
+      help: "30일 + 합계"
+    }),
+    createWithdrawSummaryCard("출금 완료", escapeHtml(formatWon(summary.withdraw_completed_total)), {
+      help: "30일 절대값 합계"
+    }),
+    createWithdrawSummaryCard("머니 지급", escapeHtml(formatWon(summary.manual_credit_total)), {
+      help: "30일 + 합계"
+    }),
+    createWithdrawSummaryCard("머니 회수", escapeHtml(formatWon(summary.manual_debit_total)), {
+      help: "30일 절대값 합계"
+    }),
+    createWithdrawSummaryCard("원장 건수", escapeHtml(`${formatNumber(summary.total_entry_count || 0)}건`), {
+      help: "30일 전체"
+    })
+  );
+}
+
+function renderWithdrawReviewWithdrawHistory(rows) {
+  if (!els.withdrawReviewWithdrawBody) return;
+  if (!rows.length) {
+    setTableMessage(els.withdrawReviewWithdrawBody, 4, "최근 출금 신청 내역이 없습니다.");
+    return;
+  }
+
+  els.withdrawReviewWithdrawBody.replaceChildren(
+    ...rows.map((row) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="is-date">${formatDateTime(row.created_at)}</td>
+        <td class="is-amount">${formatWon(row.amount)}</td>
+        <td class="is-type">${escapeHtml(getStatusLabel(row.status))}</td>
+        <td class="is-date">${row.processed_at ? formatDateTime(row.processed_at) : "-"}</td>
+      `;
+      return tr;
+    })
+  );
 }
 
 function renderWithdrawReviewPurchases(rows) {
@@ -3193,45 +3341,19 @@ function getWithdrawReviewDisplay(currentBalance, withdrawAmount, summary = {}) 
   };
 }
 
-function renderWithdrawReviewSummary(data) {
-  if (!els.withdrawReviewSummary) return;
-
+function renderWithdrawReviewDashboard(data) {
   const withdraw = data.withdraw || {};
   const company = data.company || {};
   const summary = data.summary || {};
   const reviewDisplay = getWithdrawReviewDisplay(company.current_balance, withdraw.amount, summary);
-  const { projectedBalance, projectedLabel, processingLabel, canComplete, blockReason } = reviewDisplay;
 
-  state.withdrawReviewCanComplete = canComplete;
+  state.withdrawReviewCanComplete = reviewDisplay.canComplete;
 
-  els.withdrawReviewSummary.replaceChildren(
-    createCompanyDetailItem("업체명", company.id, company.company_name),
-    createDetailItem("현재 잔액", formatWon(company.current_balance)),
-    createDetailItem("처리 유형", processingLabel),
-    createDetailItem("신청 금액", formatWon(withdraw.amount)),
-    createDetailHtmlItem(
-      projectedLabel,
-      `<span class="${projectedBalance < 0 ? "is-negative-balance" : projectedBalance > 0 ? "is-positive-balance" : ""}">${formatWon(projectedBalance)}</span>`
-    ),
-    createDetailItem("기타 대기 출금 합계", formatWon(summary.other_pending_withdraw_total)),
-    createDetailItem("신청 상태", getStatusLabel(withdraw.status)),
-    createDetailItem("신청시간", formatDateTime(withdraw.created_at))
-  );
-
-  if (els.withdrawNegativeBalanceNote) {
-    if (blockReason === "negative_balance") {
-      els.withdrawNegativeBalanceNote.hidden = false;
-      els.withdrawNegativeBalanceNote.textContent =
-        "업체 잔액이 마이너스입니다. 출금 완료 처리가 불가합니다. 반려 처리 후 매입 승인으로 선지급금을 상계해 주세요.";
-    } else if (blockReason === "insufficient_balance") {
-      els.withdrawNegativeBalanceNote.hidden = false;
-      els.withdrawNegativeBalanceNote.textContent =
-        "신청 금액이 현재 잔액을 초과합니다. 출금 완료 처리가 불가합니다. 반려 후 업체에 재신청을 안내해 주세요.";
-    } else {
-      els.withdrawNegativeBalanceNote.hidden = true;
-    }
-  }
-
+  renderWithdrawReviewMeta(data);
+  renderWithdrawReviewFlowCards(data);
+  renderWithdrawReviewRiskSignals(summary.risk_signals || []);
+  renderWithdrawReviewLedger30Summary(data.ledgerSummary30d || {});
+  renderWithdrawReviewWithdrawHistory(data.recentWithdrawRequests || []);
   updateWithdrawCompleteFormState();
 }
 
@@ -3276,7 +3398,7 @@ async function openWithdrawReviewModal(withdrawRequestId, options = {}) {
       els.withdrawAdminMemo.value =
         state.selectedWithdrawStatus === "pending" ? "" : data.withdraw?.admin_memo || "";
     }
-    renderWithdrawReviewSummary(data);
+    renderWithdrawReviewDashboard(data);
     renderWithdrawReviewPurchases(data.recentApprovedPurchases || []);
     renderWithdrawReviewLedger(data.recentLedger || []);
     updateWithdrawCompleteFormState();
@@ -3287,11 +3409,20 @@ async function openWithdrawReviewModal(withdrawRequestId, options = {}) {
       });
     }
   } catch (error) {
-    if (els.withdrawReviewSummary) {
-      els.withdrawReviewSummary.replaceChildren(
-        createDetailItem("오류", error.message || "출금 검토 정보를 불러오지 못했습니다.")
-      );
+    if (els.withdrawReviewMeta) {
+      els.withdrawReviewMeta.textContent = error.message || "출금 검토 정보를 불러오지 못했습니다.";
     }
+    if (els.withdrawReviewFlowCards) {
+      els.withdrawReviewFlowCards.replaceChildren();
+    }
+    if (els.withdrawReviewRiskSignals) {
+      els.withdrawReviewRiskSignals.hidden = true;
+      els.withdrawReviewRiskSignals.replaceChildren();
+    }
+    if (els.withdrawReviewLedger30Summary) {
+      els.withdrawReviewLedger30Summary.replaceChildren();
+    }
+    setTableMessage(els.withdrawReviewWithdrawBody, 4, "출금 신청 내역을 불러오지 못했습니다.");
     setTableMessage(els.withdrawReviewPurchaseBody, 5, "승인 매입 내역을 불러오지 못했습니다.");
     setTableMessage(els.withdrawReviewLedgerBody, 4, "잔액 변동 내역을 불러오지 못했습니다.");
     if (els.withdrawCompleteButton) els.withdrawCompleteButton.disabled = true;

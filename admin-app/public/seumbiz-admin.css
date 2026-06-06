@@ -2515,6 +2515,123 @@ tbody tr:hover {
   line-height: 1.45;
 }
 
+.sb-withdraw-review-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+  padding: 10px 12px;
+  border: 1px solid #e4ebf5;
+  border-radius: 12px;
+  background: #f8fbff;
+}
+
+.sb-withdraw-review-meta strong {
+  color: #10233f;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.sb-withdraw-review-meta span {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.sb-withdraw-flow-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sb-withdraw-flow-grid .sb-summary-card {
+  min-height: 96px;
+  padding: 14px 15px;
+}
+
+.sb-withdraw-flow-grid .sb-summary-card strong {
+  font-size: 22px;
+  line-height: 1.15;
+}
+
+.sb-withdraw-flow-grid .sb-summary-card-primary strong {
+  color: #0b3ea8;
+  font-size: 24px;
+}
+
+.sb-withdraw-flow-grid .is-negative-balance {
+  color: #be123c;
+}
+
+.sb-withdraw-flow-grid .is-positive-balance {
+  color: #087443;
+}
+
+.sb-withdraw-ledger30-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sb-withdraw-ledger30-grid .sb-summary-card {
+  min-height: 84px;
+  padding: 12px 13px;
+}
+
+.sb-withdraw-ledger30-grid .sb-summary-card strong {
+  font-size: 18px;
+}
+
+.sb-withdraw-risk-signals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sb-withdraw-risk-signals[hidden] {
+  display: none;
+}
+
+.sb-withdraw-risk-chip {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 100%;
+  padding: 8px 11px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.sb-withdraw-risk-chip strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.sb-withdraw-risk-chip span {
+  display: block;
+  margin-top: 2px;
+  font-weight: 650;
+}
+
+.sb-withdraw-risk-chip--danger {
+  background: #fef3f2;
+  border-color: #fecdca;
+  color: #b42318;
+}
+
+.sb-withdraw-risk-chip--warning {
+  background: #fffaeb;
+  border-color: #fedf89;
+  color: #b54708;
+}
+
+.sb-withdraw-risk-chip--info {
+  background: #eff8ff;
+  border-color: #b2ddff;
+  color: #175cd3;
+}
+
 .sb-withdraw-review-summary.sb-detail-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
@@ -2605,6 +2722,11 @@ tbody tr:hover {
 }
 
 @media (max-width: 900px) {
+  .sb-withdraw-flow-grid,
+  .sb-withdraw-ledger30-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .sb-withdraw-review-summary.sb-detail-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

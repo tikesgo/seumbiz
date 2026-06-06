@@ -3725,7 +3725,16 @@ async function handleSeumBizWithdrawRequestReview(req, res, withdrawRequestId) {
     }
 
     const companyId = withdraw.company_id;
-    const [companies, balances, otherPendingRows, recentPurchases, recentLedger] = await Promise.all([
+    const ledger30Start = getWithdrawReviewPeriodStartIso(30);
+    const [
+      companies,
+      balances,
+      otherPendingRows,
+      recentPurchases,
+      recentLedger,
+      ledger30dRows,
+      recentWithdrawRequests
+    ] = await Promise.all([
       supabaseAdminRequest(
         `/rest/v1/biz_companies?id=eq.${encodeURIComponent(companyId)}&select=id,company_name&limit=1`
       ),
@@ -3746,6 +3755,16 @@ async function handleSeumBizWithdrawRequestReview(req, res, withdrawRequestId) {
         `/rest/v1/biz_balance_ledger?company_id=eq.${encodeURIComponent(
           companyId
         )}&select=id,ledger_type,amount,reason,memo,created_at&order=created_at.desc&limit=20`
+      ),
+      supabaseAdminRequest(
+        `/rest/v1/biz_balance_ledger?company_id=eq.${encodeURIComponent(
+          companyId
+        )}&created_at=gte.${encodeURIComponent(ledger30Start)}&select=ledger_type,amount,created_at&order=created_at.desc&limit=10000`
+      ),
+      supabaseAdminRequest(
+        `/rest/v1/biz_withdraw_requests?company_id=eq.${encodeURIComponent(
+          companyId
+        )}&select=id,amount,status,created_at,processed_at&order=created_at.desc&limit=5`
       )
     ]);
 
@@ -3756,6 +3775,8 @@ async function handleSeumBizWithdrawRequestReview(req, res, withdrawRequestId) {
       (sum, row) => sum + normalizeNumber(row.amount, 0),
       0
     );
+    const totalPendingWithdrawTotal = otherPendingTotal + withdrawAmount;
+    const ledgerSummary30d = buildWithdrawReviewLedgerSummary30d(ledger30dRows || []);
     const canComplete = currentBalance >= 0 && withdrawAmount <= currentBalance;
     const blockReason =
       currentBalance < 0
@@ -3763,6 +3784,12 @@ async function handleSeumBizWithdrawRequestReview(req, res, withdrawRequestId) {
         : withdrawAmount > currentBalance
           ? "insufficient_balance"
           : null;
+    const riskSignals = buildWithdrawReviewRiskSignals({
+      currentBalance,
+      withdrawAmount,
+      otherPendingTotal,
+      ledgerSummary30d
+    });
 
     sendJson(res, 200, {
       ok: true,
@@ -3785,10 +3812,14 @@ async function handleSeumBizWithdrawRequestReview(req, res, withdrawRequestId) {
         processing_label: "출금 완료",
         projected_balance_after: currentBalance - withdrawAmount,
         other_pending_withdraw_total: otherPendingTotal,
+        total_pending_withdraw_total: totalPendingWithdrawTotal,
         available_withdraw_amount: Math.max(0, currentBalance - otherPendingTotal),
         can_complete: canComplete,
-        block_reason: blockReason
+        block_reason: blockReason,
+        risk_signals: riskSignals
       },
+      ledgerSummary30d,
+      recentWithdrawRequests: recentWithdrawRequests || [],
       recentApprovedPurchases: recentPurchases || [],
       recentLedger: recentLedger || []
     });
@@ -3799,6 +3830,109 @@ async function handleSeumBizWithdrawRequestReview(req, res, withdrawRequestId) {
       detail: String(error.message || error)
     });
   }
+}
+
+function getWithdrawReviewPeriodStartIso(days = 30) {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  date.setHours(0, 0, 0, 0);
+  return date.toISOString();
+}
+
+function buildWithdrawReviewLedgerSummary30d(rows = []) {
+  const summary = {
+    purchase_approved_total: 0,
+    withdraw_completed_total: 0,
+    manual_credit_total: 0,
+    manual_debit_total: 0,
+    total_entry_count: 0,
+    purchase_approved_7d_count: 0
+  };
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  sevenDaysAgo.setHours(0, 0, 0, 0);
+
+  for (const row of rows || []) {
+    summary.total_entry_count += 1;
+    const amount = normalizeNumber(row.amount, 0);
+    const createdAt = row.created_at ? new Date(row.created_at) : null;
+    const ledgerType = row.ledger_type;
+
+    if (ledgerType === "purchase_approved") {
+      summary.purchase_approved_total += amount;
+      if (createdAt && !Number.isNaN(createdAt.getTime()) && createdAt >= sevenDaysAgo) {
+        summary.purchase_approved_7d_count += 1;
+      }
+    } else if (ledgerType === "withdraw_completed") {
+      summary.withdraw_completed_total += Math.abs(amount);
+    } else if (ledgerType === "manual_credit") {
+      summary.manual_credit_total += amount;
+    } else if (ledgerType === "manual_debit") {
+      summary.manual_debit_total += Math.abs(amount);
+    }
+  }
+
+  return summary;
+}
+
+function buildWithdrawReviewRiskSignals({
+  currentBalance,
+  withdrawAmount,
+  otherPendingTotal,
+  ledgerSummary30d = {}
+}) {
+  const signals = [];
+  const balance = normalizeNumber(currentBalance, 0);
+  const amount = normalizeNumber(withdrawAmount, 0);
+  const otherPending = normalizeNumber(otherPendingTotal, 0);
+
+  if (balance < 0) {
+    signals.push({
+      code: "negative_balance",
+      level: "danger",
+      label: "마이너스 잔액",
+      message: "출금 완료 불가. 반려 후 매입 승인으로 선지급금을 상계해 주세요."
+    });
+  }
+
+  if (amount > balance) {
+    signals.push({
+      code: "insufficient_balance",
+      level: "danger",
+      label: "잔액 초과",
+      message: "신청 금액이 현재 잔액을 초과합니다. 완료 처리가 불가합니다."
+    });
+  }
+
+  if (balance > 0 && amount >= balance * 0.8) {
+    signals.push({
+      code: "high_amount_ratio",
+      level: "warning",
+      label: "고액 출금 주의",
+      message: "신청 금액이 현재 잔액의 80% 이상입니다."
+    });
+  }
+
+  if (normalizeNumber(ledgerSummary30d.purchase_approved_7d_count, 0) === 0) {
+    signals.push({
+      code: "no_recent_purchase_7d",
+      level: "warning",
+      label: "최근 매입 없음",
+      message: "최근 7일간 매입 승인 원장이 없습니다."
+    });
+  }
+
+  if (otherPending > 0) {
+    signals.push({
+      code: "has_other_pending",
+      level: "info",
+      label: "다른 대기 출금",
+      message: "같은 업체에 다른 대기 출금 신청이 있습니다.",
+      other_pending_amount: otherPending
+    });
+  }
+
+  return signals;
 }
 
 async function handleSeumBizWithdrawRequestComplete(req, res, withdrawRequestId) {
