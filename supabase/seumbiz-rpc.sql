@@ -1058,10 +1058,6 @@ begin
   from public.biz_balance_ledger l
   where l.company_id = p_company_id;
 
-  if v_adjustment_type = 'debit' and v_amount > v_current_balance then
-    raise exception 'amount exceeds current balance';
-  end if;
-
   v_signed_amount := case
     when v_adjustment_type = 'credit' then v_amount
     else -v_amount
@@ -1132,7 +1128,7 @@ end;
 $$;
 
 comment on function public.create_manual_ledger_adjustment(uuid, text, numeric, text, text)
-is 'Creates a manual credit or debit ledger adjustment and admin log in one transaction. Intended for admin users.';
+is 'Creates a manual credit or debit ledger adjustment and admin log in one transaction. Intended for admin users. Manual debit may create a negative company balance.';
 
 revoke all on function public.create_manual_ledger_adjustment(uuid, text, numeric, text, text) from public;
 revoke all on function public.create_manual_ledger_adjustment(uuid, text, numeric, text, text) from anon;

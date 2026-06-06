@@ -45,6 +45,7 @@ const state = {
   companies: [],
   selectedCompanyId: "",
   selectedCompanyBalance: 0,
+  companyAdjustmentType: "credit",
   giftcards: [],
   companyGiftcardRateItems: [],
   telegramRecipients: [],
@@ -159,6 +160,7 @@ const els = {
   companyAdjustmentMessage: document.querySelector("#companyAdjustmentMessage"),
   companyBalanceBefore: document.querySelector("#companyBalanceBefore"),
   companyBalanceAfter: document.querySelector("#companyBalanceAfter"),
+  companyBalanceAfterNote: document.querySelector("#companyBalanceAfterNote"),
   companyLedgerBody: document.querySelector("#companyLedgerBody"),
   companyGiftcardRatesBody: document.querySelector("#companyGiftcardRatesBody"),
   companyGiftcardRatesMessage: document.querySelector("#companyGiftcardRatesMessage"),
@@ -275,8 +277,11 @@ function init() {
   els.companyApproveButton?.addEventListener("click", () => handleCompanyStatusAction("approved"));
   els.companyRejectButton?.addEventListener("click", () => handleCompanyStatusAction("rejected"));
   els.companyAdjustmentForm?.addEventListener("submit", handleCompanyAdjustment);
-  els.companyAdjustmentType?.addEventListener("change", updateCompanyBalancePreview);
-  els.companyAdjustmentAmount?.addEventListener("input", updateCompanyBalancePreview);
+  els.companyAdjustmentType?.addEventListener("change", () => {
+    setCompanyAdjustmentType(els.companyAdjustmentType.value);
+    updateCompanyBalancePreview();
+  });
+  els.companyAdjustmentAmount?.addEventListener("input", handleCompanyAdjustmentAmountInput);
   els.companyGiftcardRatesSaveButton?.addEventListener("click", handleSaveCompanyGiftcardRates);
   els.companyGiftcardRatesBody?.addEventListener("input", handleCompanyGiftcardRateInput);
   for (const button of els.settlementTabButtons) {
@@ -1776,7 +1781,10 @@ async function loadCompanies(options = {}) {
     state.companies = data.items || [];
     renderCompanies();
     if (!options.skipDetailRefresh && state.selectedCompanyId && !els.companyModal?.hidden) {
-      await openCompanyModal(state.selectedCompanyId, { silent: true });
+      await openCompanyModal(state.selectedCompanyId, {
+        silent: true,
+        preserveAdjustmentForm: true
+      });
     }
   } catch (error) {
     if (!options.silent) {
@@ -1831,7 +1839,11 @@ async function openCompanyModal(companyId, options = {}) {
     fillCompanyForm(company);
     renderCompanyDetail(company, data.users || []);
     renderCompanyLedger(data.recentLedger || []);
-    resetCompanyAdjustmentForm();
+    if (!options.preserveAdjustmentForm) {
+      resetCompanyAdjustmentForm();
+    } else {
+      syncCompanyAdjustmentTypeSelect();
+    }
     updateCompanyBalancePreview();
     await loadCompanyGiftcardRates(companyId, { silent: options.silent });
   } catch (error) {
@@ -1845,6 +1857,7 @@ function closeCompanyModal() {
   if (els.companyModal) els.companyModal.hidden = true;
   state.selectedCompanyId = "";
   state.selectedCompanyBalance = 0;
+  state.companyAdjustmentType = "credit";
   state.companyGiftcardRateItems = [];
 }
 
@@ -2079,25 +2092,62 @@ async function handleSaveCompany(event) {
   }
 }
 
+function syncCompanyAdjustmentTypeSelect() {
+  if (els.companyAdjustmentType) {
+    els.companyAdjustmentType.value = state.companyAdjustmentType;
+  }
+}
+
+function setCompanyAdjustmentType(type) {
+  state.companyAdjustmentType = type === "debit" ? "debit" : "credit";
+  syncCompanyAdjustmentTypeSelect();
+}
+
+function getCompanyAdjustmentType() {
+  return state.companyAdjustmentType === "debit" ? "debit" : "credit";
+}
+
 function resetCompanyAdjustmentForm() {
-  els.companyAdjustmentType.value = "credit";
+  if (!els.companyAdjustmentType) return;
+  setCompanyAdjustmentType("credit");
   els.companyAdjustmentAmount.value = "";
   els.companyAdjustmentReason.value = "";
   els.companyAdjustmentMemo.value = "";
   clearMessage(els.companyAdjustmentMessage);
+  if (els.companyBalanceAfterNote) els.companyBalanceAfterNote.hidden = true;
+}
+
+function handleCompanyAdjustmentAmountInput(event) {
+  const input = event.target;
+  if (!input || input !== els.companyAdjustmentAmount) return;
+
+  const sanitized = String(input.value ?? "").replace(/\D/g, "");
+  if (input.value !== sanitized) {
+    input.value = sanitized;
+  }
+  updateCompanyBalancePreview();
 }
 
 function updateCompanyBalancePreview() {
   if (!els.companyBalanceBefore || !els.companyBalanceAfter) return;
   const current = parseMoneyNumber(state.selectedCompanyBalance);
   const rawAmount = els.companyAdjustmentAmount?.value;
-  const amount = rawAmount === "" || rawAmount === null || rawAmount === undefined ? NaN : parseMoneyNumber(rawAmount);
+  const amount =
+    rawAmount === "" || rawAmount === null || rawAmount === undefined ? NaN : parsePositiveMoneyNumber(rawAmount);
   const validAmount = Number.isFinite(amount) && amount > 0;
   const previewAmount = validAmount ? amount : 0;
-  const signedAmount = els.companyAdjustmentType?.value === "debit" ? -previewAmount : previewAmount;
+  const signedAmount = getCompanyAdjustmentType() === "debit" ? -previewAmount : previewAmount;
+  const projectedBalance = current + signedAmount;
   els.companyBalanceBefore.textContent = formatWon(current);
-  els.companyBalanceAfter.textContent = validAmount ? formatWon(current + signedAmount) : formatWon(current);
-  els.companyBalanceAfter.classList.toggle("is-negative", validAmount && current + signedAmount < 0);
+  els.companyBalanceAfter.textContent = validAmount ? formatWon(projectedBalance) : formatWon(current);
+  els.companyBalanceAfter.classList.toggle("is-negative", validAmount && projectedBalance < 0);
+  if (els.companyBalanceAfterNote) {
+    const showNegativeNote = validAmount && getCompanyAdjustmentType() === "debit" && projectedBalance < 0;
+    els.companyBalanceAfterNote.hidden = !showNegativeNote;
+    els.companyBalanceAfterNote.textContent = showNegativeNote
+      ? "예상 잔액이 음수입니다. 관리자 회수는 계속 진행할 수 있습니다."
+      : "";
+  }
 }
 
 async function handleCompanyAdjustment(event) {
@@ -2105,8 +2155,8 @@ async function handleCompanyAdjustment(event) {
   if (!state.selectedCompanyId) return;
   clearMessage(els.companyAdjustmentMessage);
   const payload = {
-    adjustment_type: els.companyAdjustmentType.value,
-    amount: parseMoneyNumber(els.companyAdjustmentAmount.value),
+    adjustment_type: getCompanyAdjustmentType(),
+    amount: parsePositiveMoneyNumber(els.companyAdjustmentAmount.value),
     reason: els.companyAdjustmentReason.value.trim(),
     admin_memo: els.companyAdjustmentMemo.value.trim() || null
   };
@@ -2118,11 +2168,6 @@ async function handleCompanyAdjustment(event) {
   }
   if (!Number.isFinite(payload.amount) || payload.amount <= 0) {
     setMessage(els.companyAdjustmentMessage, "\uAE08\uC561\uC744 0\uC6D0\uBCF4\uB2E4 \uD06C\uAC8C \uC785\uB825\uD574\uC8FC\uC138\uC694.", "error");
-    els.companyAdjustmentAmount.focus();
-    return;
-  }
-  if (payload.adjustment_type === "debit" && payload.amount > parseMoneyNumber(state.selectedCompanyBalance)) {
-    setMessage(els.companyAdjustmentMessage, "\uD68C\uC218 \uAE08\uC561\uC740 \uD604\uC7AC \uC794\uC561\uBCF4\uB2E4 \uD074 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.", "error");
     els.companyAdjustmentAmount.focus();
     return;
   }
@@ -2165,9 +2210,10 @@ function confirmCompanyAdjustment(payload) {
           <div><dt>\uCC98\uB9AC \uAD6C\uBD84</dt><dd>${actionLabel}</dd></div>
           <div><dt>\uAE08\uC561</dt><dd>${formatWon(payload.amount)}</dd></div>
           <div><dt>\uCC98\uB9AC \uC804 \uC794\uC561</dt><dd>${formatWon(current)}</dd></div>
-          <div><dt>\uCC98\uB9AC \uD6C4 \uC608\uC0C1 \uC794\uC561</dt><dd>${formatWon(nextBalance)}</dd></div>
+          <div><dt>\uCC98\uB9AC \uD6C4 \uC608\uC0C1 \uC794\uC561</dt><dd class="${nextBalance < 0 ? "is-negative-balance" : ""}">${formatWon(nextBalance)}</dd></div>
           <div><dt>\uC0AC\uC720</dt><dd>${escapeHtml(payload.reason)}</dd></div>
         </dl>
+        ${nextBalance < 0 ? '<p class="sb-company-negative-warning">예상 잔액이 음수입니다. 관리자 회수는 허용됩니다.</p>' : ""}
         <p class="sb-quick-approve-note">\uC794\uC561\uC740 \uC9C1\uC811 \uC218\uC815\uD558\uC9C0 \uC54A\uACE0 create_manual_ledger_adjustment RPC\uB85C \uC6D0\uC7A5\uC5D0 \uAE30\uB85D\uB429\uB2C8\uB2E4.</p>
         <div class="sb-quick-approve-actions">
           <button class="sb-outline-button" type="button" data-close>\uCDE8\uC18C</button>
@@ -3592,6 +3638,16 @@ function formatNumber(value) {
 
 function normalizePlainAmount(value) {
   return parseMoneyNumber(value);
+}
+
+function parsePositiveMoneyNumber(value) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) && value > 0 ? Math.trunc(value) : 0;
+  }
+  const digits = String(value ?? "").replace(/\D/g, "");
+  if (!digits) return 0;
+  const number = Number(digits);
+  return Number.isFinite(number) && number > 0 ? Math.trunc(number) : 0;
 }
 
 function parseMoneyNumber(value) {
