@@ -17,6 +17,7 @@ const STATUS_BADGE_CLASSES = {
 
 let currentBalance = 0;
 let isSubmitting = false;
+let pendingWithdrawAmount = 0;
 let withdrawRecentRequestId = 0;
 let withdrawInitialized = false;
 
@@ -28,10 +29,16 @@ const recentList = $("#withdrawRecentList");
 const balanceSummary = $(".withdraw-balance-summary strong");
 const currentBalanceInline = $("[data-withdraw-current-balance]");
 const projectedBalanceInline = $("[data-withdraw-projected-balance]");
+const projectedBalanceLabel = $("[data-withdraw-projected-label]");
+const prepaidSettlementNote = $("#withdrawPrepaidSettlementNote");
 const alertModal = $("#withdrawAlertModal");
 const alertTitle = $("#withdrawAlertTitle");
 const alertMessage = $("#withdrawAlertMessage");
 const alertDetail = $("#withdrawAlertDetail");
+const confirmModal = $("#withdrawConfirmModal");
+const confirmNotice = $("#withdrawConfirmNotice");
+const confirmDetail = $("#withdrawConfirmDetail");
+const confirmSubmitBtn = $("#withdrawConfirmSubmitBtn");
 
 const formatNumber = (value) => Number(value || 0).toLocaleString("ko-KR");
 const formatMoney = (value) => `${formatNumber(value)}원`;
@@ -80,8 +87,16 @@ const openWithdrawAlert = ({ title, message, detail = "" }) => {
 const closeWithdrawAlert = () => {
   if (!alertModal) return;
   alertModal.hidden = true;
-  document.body.classList.remove("is-withdraw-alert-open");
+  if (!confirmModal || confirmModal.hidden) {
+    document.body.classList.remove("is-withdraw-alert-open");
+  }
   amountInput?.focus();
+};
+
+const setConfirmSubmitting = (value) => {
+  if (!confirmSubmitBtn) return;
+  confirmSubmitBtn.disabled = value;
+  confirmSubmitBtn.textContent = value ? "처리 중..." : "신청 확정";
 };
 
 const setSubmitting = (value) => {
@@ -116,7 +131,77 @@ const updateBalance = () => {
   updateProjectedBalance();
 };
 
+const isPrepaidSettlementMode = () => currentBalance < 0;
+
+const getWithdrawConfirmDisplay = (amount) => {
+  const current = Number(currentBalance) || 0;
+  const requestAmount = Number(amount) || 0;
+  const prepaid = current < 0;
+  return {
+    processingType: prepaid ? "선지급 상계" : "출금신청",
+    projectedLabel: prepaid ? "상계 후 예상 잔액" : "출금신청 후 예상 잔액",
+    projectedBalance: prepaid ? current + requestAmount : current - requestAmount,
+    notice: prepaid
+      ? "선지급금 상계 신청입니다. 실제 추가 지급이 아닙니다."
+      : "신청 확정 후 관리자 확인을 거쳐 처리됩니다.",
+  };
+};
+
+const openWithdrawConfirm = (amount) => {
+  if (!confirmModal || !confirmNotice || !confirmDetail) return;
+
+  const display = getWithdrawConfirmDisplay(amount);
+  pendingWithdrawAmount = amount;
+
+  confirmNotice.textContent = display.notice;
+  confirmDetail.innerHTML = `
+    <dl>
+      ${[
+        { label: "현재 업체 잔액", value: formatMoney(currentBalance) },
+        { label: "신청 금액", value: formatMoney(amount) },
+        { label: display.projectedLabel, value: formatMoney(display.projectedBalance) },
+        { label: "처리 유형", value: display.processingType },
+      ]
+        .map(
+          (item) => `
+            <div>
+              <dt>${escapeHtml(item.label)}</dt>
+              <dd>${escapeHtml(item.value)}</dd>
+            </div>
+          `,
+        )
+        .join("")}
+    </dl>
+  `;
+
+  setConfirmSubmitting(false);
+  confirmModal.hidden = false;
+  document.body.classList.add("is-withdraw-alert-open");
+  confirmSubmitBtn?.focus();
+};
+
+const closeWithdrawConfirm = () => {
+  if (!confirmModal) return;
+  confirmModal.hidden = true;
+  pendingWithdrawAmount = 0;
+  setConfirmSubmitting(false);
+  if (!alertModal || alertModal.hidden) {
+    document.body.classList.remove("is-withdraw-alert-open");
+  }
+  amountInput?.focus();
+};
+
 const updateProjectedBalance = () => {
+  const prepaidMode = isPrepaidSettlementMode();
+
+  if (projectedBalanceLabel) {
+    projectedBalanceLabel.textContent = prepaidMode ? "상계 후 예상 잔액" : "출금 후 예상 잔액";
+  }
+
+  if (prepaidSettlementNote) {
+    prepaidSettlementNote.hidden = !prepaidMode;
+  }
+
   if (!projectedBalanceInline) return;
 
   const amount = getAmount();
@@ -124,13 +209,14 @@ const updateProjectedBalance = () => {
 
   if (!hasValidAmount) {
     projectedBalanceInline.textContent = "-";
-    projectedBalanceInline.classList.remove("is-negative");
+    projectedBalanceInline.classList.remove("is-negative", "is-positive");
     return;
   }
 
-  const projectedBalance = currentBalance - amount;
+  const projectedBalance = prepaidMode ? currentBalance + amount : currentBalance - amount;
   projectedBalanceInline.textContent = formatMoney(projectedBalance);
   projectedBalanceInline.classList.toggle("is-negative", projectedBalance < 0);
+  projectedBalanceInline.classList.toggle("is-positive", projectedBalance > 0);
 };
 
 const renderRecentRequests = (rows) => {
@@ -237,24 +323,16 @@ const validateAmount = (amount) => {
   return null;
 };
 
-const handleSubmit = async () => {
-  if (isSubmitting) return;
+const submitWithdrawRequest = async (amount) => {
+  if (isSubmitting || !amount) return;
 
   if (!supabase) {
     setStatus("Supabase 연결 설정을 확인해주세요.", "error");
     return;
   }
 
-  const amount = getAmount();
-  const validationError = validateAmount(amount);
-
-  if (validationError) {
-    setStatus("", "");
-    openWithdrawAlert(validationError);
-    return;
-  }
-
   setSubmitting(true);
+  setConfirmSubmitting(true);
   setStatus("출금 신청을 등록하고 있습니다.", "");
 
   try {
@@ -267,21 +345,46 @@ const handleSubmit = async () => {
 
     const row = Array.isArray(data) ? data[0] : data;
     void notifyWithdrawRequestTelegram(row);
+    closeWithdrawConfirm();
     setStatus(`출금 신청이 접수되었습니다. 신청 금액: ${formatMoney(row?.amount || amount)}`, "ok");
     if (amountInput) amountInput.value = "";
     updateProjectedBalance();
     await loadRecentRequests();
   } catch (error) {
+    closeWithdrawConfirm();
     setStatus(error.message || "출금 신청 등록에 실패했습니다.", "error");
   } finally {
     setSubmitting(false);
+    setConfirmSubmitting(false);
   }
+};
+
+const handleSubmit = async () => {
+  if (isSubmitting) return;
+  if (confirmModal && !confirmModal.hidden) return;
+
+  const amount = getAmount();
+  const validationError = validateAmount(amount);
+
+  if (validationError) {
+    setStatus("", "");
+    openWithdrawAlert(validationError);
+    return;
+  }
+
+  openWithdrawConfirm(amount);
+};
+
+const handleConfirmSubmit = async () => {
+  if (isSubmitting || !pendingWithdrawAmount) return;
+  await submitWithdrawRequest(pendingWithdrawAmount);
 };
 
 document.addEventListener("click", (event) => {
   const amountButton = event.target.closest("[data-withdraw-amount]");
   if (amountButton) {
     setAmount((getAmount() || 0) + Number(amountButton.dataset.withdrawAmount || 0));
+    updateProjectedBalance();
     setStatus("", "");
     return;
   }
@@ -302,6 +405,7 @@ amountInput?.addEventListener("input", () => {
   setStatus("", "");
 });
 submitButton?.addEventListener("click", handleSubmit);
+confirmSubmitBtn?.addEventListener("click", handleConfirmSubmit);
 
 alertModal?.addEventListener("click", (event) => {
   if (event.target.closest("[data-withdraw-alert-close]")) {
@@ -309,8 +413,21 @@ alertModal?.addEventListener("click", (event) => {
   }
 });
 
+confirmModal?.addEventListener("click", (event) => {
+  if (event.target.closest("[data-withdraw-confirm-close]")) {
+    closeWithdrawConfirm();
+  }
+});
+
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && alertModal && !alertModal.hidden) {
+  if (event.key !== "Escape") return;
+
+  if (confirmModal && !confirmModal.hidden) {
+    closeWithdrawConfirm();
+    return;
+  }
+
+  if (alertModal && !alertModal.hidden) {
     closeWithdrawAlert();
   }
 });

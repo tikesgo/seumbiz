@@ -4242,6 +4242,23 @@
   color: #be123c;
 }
 
+.withdraw-projected-balance strong.is-positive {
+  color: #087443;
+}
+
+.withdraw-prepaid-note {
+  margin: 6px 2px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+  text-align: right;
+}
+
 .withdraw-projected-balance small {
   flex: 0 0 100%;
   color: #98a2b3;
@@ -4531,6 +4548,39 @@
   border-radius: 11px;
   color: #fff;
   background: #155eef;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.withdraw-confirm-dialog {
+  gap: 14px;
+}
+
+.withdraw-confirm-icon {
+  color: #0f766e;
+  background: #ecfdf5;
+}
+
+.withdraw-confirm-notice {
+  margin: 8px 0 0;
+  color: #475467;
+  font-size: 14px;
+  line-height: 1.55;
+  font-weight: 700;
+}
+
+.withdraw-confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.withdraw-confirm-cancel {
+  min-height: 46px;
+  border: 1px solid #d0d5dd;
+  border-radius: 11px;
+  color: #344054;
+  background: #fff;
   font-size: 15px;
   font-weight: 900;
 }

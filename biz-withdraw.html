@@ -71,8 +71,12 @@
               </div>
               <p class="withdraw-minimum-note">최소 출금 가능 금액: 10,000원</p>
               <p class="withdraw-projected-balance">
-                출금 후 예상 잔액 <strong data-withdraw-projected-balance>-</strong>
+                <span data-withdraw-projected-label>출금 후 예상 잔액</span>
+                <strong data-withdraw-projected-balance>-</strong>
                 <small>관리자 완료 처리 시 반영</small>
+              </p>
+              <p class="withdraw-prepaid-note" id="withdrawPrepaidSettlementNote" hidden>
+                선지급금 상계 신청입니다. 실제 추가 지급이 아닙니다.
               </p>
               <div class="withdraw-quick-amounts" aria-label="빠른 금액 선택">
                 <button type="button" data-withdraw-amount="100000">+100,000원</button>
@@ -122,6 +126,24 @@
         </div>
         <div class="withdraw-alert-detail" id="withdrawAlertDetail" hidden></div>
         <button class="withdraw-alert-button" type="button" data-withdraw-alert-close>확인</button>
+      </section>
+    </div>
+
+    <div class="withdraw-alert-modal" id="withdrawConfirmModal" hidden>
+      <div class="withdraw-alert-backdrop" data-withdraw-confirm-close></div>
+      <section class="withdraw-alert-dialog withdraw-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="withdrawConfirmTitle">
+        <div class="withdraw-alert-head">
+          <span class="withdraw-alert-icon withdraw-confirm-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 8v5" /><path d="M12 17h.01" /><path d="M12 3a9 9 0 1 0 9 9" /><path d="M12 7v6l4 2" /></svg></span>
+          <div>
+            <h2 id="withdrawConfirmTitle">출금신청 확인</h2>
+            <p id="withdrawConfirmNotice" class="withdraw-confirm-notice"></p>
+          </div>
+        </div>
+        <div class="withdraw-alert-detail" id="withdrawConfirmDetail"></div>
+        <div class="withdraw-confirm-actions">
+          <button class="withdraw-confirm-cancel" type="button" data-withdraw-confirm-close>취소</button>
+          <button class="withdraw-alert-button" id="withdrawConfirmSubmitBtn" type="button">신청 확정</button>
+        </div>
       </section>
     </div>
     <script type="module" src="/js/biz-auth.js"></script>
